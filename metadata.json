@@ -1,0 +1,6 @@
+{
+  "name": "CaM-Mystery",
+  "description": "Wedding photography and cinematic filmmaking studio by Sanjib Bhowmik capturing authentic emotions and timeless stories.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
