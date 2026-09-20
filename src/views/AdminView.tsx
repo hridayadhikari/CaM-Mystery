@@ -89,10 +89,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem('cammystery_admin_auth') === 'true';
   });
-  const [authMode, setAuthMode] = useState<'supabase' | 'pin'>('supabase');
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
-  const [pinInput, setPinInput] = useState('');
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -185,42 +183,32 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     e.preventDefault();
     setAuthError('');
 
-    if (authMode === 'supabase') {
-      if (!emailInput.trim() || !passwordInput) {
-        setAuthError('Please enter both email and password.');
+    if (!emailInput.trim() || !passwordInput) {
+      setAuthError('Please enter both email and password.');
+      return;
+    }
+
+    setAuthLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailInput.trim(),
+        password: passwordInput,
+      });
+
+      if (error) {
+        setAuthError(error.message || 'Invalid email or password.');
+        setAuthLoading(false);
         return;
       }
 
-      setAuthLoading(true);
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: emailInput.trim(),
-          password: passwordInput,
-        });
-
-        if (error) {
-          setAuthError(error.message || 'Invalid email or password.');
-          setAuthLoading(false);
-          return;
-        }
-
-        if (data.session) {
-          setIsAuthenticated(true);
-          sessionStorage.setItem('cammystery_admin_auth', 'true');
-        }
-      } catch (err: any) {
-        setAuthError(err?.message || 'Failed to authenticate with Supabase.');
-      } finally {
-        setAuthLoading(false);
-      }
-    } else {
-      if (pinInput === 'cammystery2026' || pinInput === 'admin') {
+      if (data.session) {
         setIsAuthenticated(true);
         sessionStorage.setItem('cammystery_admin_auth', 'true');
-        setAuthError('');
-      } else {
-        setAuthError('Incorrect passcode.');
       }
+    } catch (err: any) {
+      setAuthError(err?.message || 'Failed to authenticate. Please check your network and credentials.');
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -319,84 +307,34 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
             Sign in with your admin credentials to manage portfolio, prices, hero slides, and enquiries.
           </p>
 
-          {/* Auth Mode Toggle */}
-          <div className="flex border border-neutral-200 rounded-xs p-0.5 mb-5 bg-neutral-100 text-xs">
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode('supabase');
-                setAuthError('');
-              }}
-              className={`flex-1 py-1.5 font-medium transition-colors ${
-                authMode === 'supabase'
-                  ? 'bg-white text-neutral-900 shadow-xs'
-                  : 'text-neutral-500 hover:text-neutral-800'
-              }`}
-            >
-              Supabase Account
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode('pin');
-                setAuthError('');
-              }}
-              className={`flex-1 py-1.5 font-medium transition-colors ${
-                authMode === 'pin'
-                  ? 'bg-white text-neutral-900 shadow-xs'
-                  : 'text-neutral-500 hover:text-neutral-800'
-              }`}
-            >
-              Passcode Backup
-            </button>
-          </div>
-
           <form onSubmit={handleLogin} className="space-y-4 text-left">
-            {authMode === 'supabase' ? (
-              <>
-                <div>
-                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1 font-medium">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="admin@cammystery.com"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
-                    autoFocus
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1 font-medium">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
-                    required
-                  />
-                </div>
-              </>
-            ) : (
-              <div>
-                <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1 font-medium">
-                  Admin Passcode
-                </label>
-                <input
-                  type="password"
-                  placeholder="Enter passcode"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
-                  autoFocus
-                />
-              </div>
-            )}
+            <div>
+              <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1 font-medium">
+                Email Address
+              </label>
+              <input
+                type="email"
+                placeholder="admin@cammystery.com"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                autoFocus
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1 font-medium">
+                Password
+              </label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                required
+              />
+            </div>
 
             {authError && (
               <p className="text-xs text-rose-600 font-sans">{authError}</p>
@@ -410,7 +348,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
               {authLoading ? (
                 <>
                   <Loader2 size={14} className="animate-spin" />
-                  <span>Authenticating...</span>
+                  <span>Signing In...</span>
                 </>
               ) : (
                 <span>Sign In to CMS</span>
@@ -418,8 +356,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-neutral-100 flex justify-between items-center text-xs text-neutral-400">
-            <span>{authMode === 'supabase' ? 'Supabase Auth' : 'Passcode: cammystery2026'}</span>
+          <div className="mt-8 pt-6 border-t border-neutral-100 flex justify-end items-center text-xs text-neutral-400">
             <button
               onClick={() => onNavigate('HOME')}
               className="hover:text-neutral-800 underline cursor-pointer"
