@@ -20,7 +20,9 @@ import {
   X,
   Star,
   BookOpen,
+  Loader2,
 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import { useCMS } from '../lib/cmsStore';
 import { NavPage, SelectedWorkItem, PricingPackage, TeamMember, Testimonial, FaqItem, WeddingProject } from '../types';
 import { CloudinaryImageUpload } from '../components/admin/CloudinaryImageUpload';
@@ -87,9 +89,36 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return sessionStorage.getItem('cammystery_admin_auth') === 'true';
   });
+  const [authMode, setAuthMode] = useState<'supabase' | 'pin'>('supabase');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
   const [pinInput, setPinInput] = useState('');
   const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+
+  // Check Supabase session on mount
+  React.useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted && session?.user) {
+        setIsAuthenticated(true);
+        sessionStorage.setItem('cammystery_admin_auth', 'true');
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted && session?.user) {
+        setIsAuthenticated(true);
+        sessionStorage.setItem('cammystery_admin_auth', 'true');
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Portfolio Subtab: 'single' (individual photos) vs 'projects' (full wedding stories)
   const [portfolioSubTab, setPortfolioSubTab] = useState<'single' | 'projects'>('single');
@@ -152,18 +181,55 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     requestConfirm(title, message, onConfirm, { confirmText: 'Delete', type: 'danger' });
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinInput === 'cammystery2026' || pinInput === 'admin') {
-      setIsAuthenticated(true);
-      sessionStorage.setItem('cammystery_admin_auth', 'true');
-      setAuthError('');
+    setAuthError('');
+
+    if (authMode === 'supabase') {
+      if (!emailInput.trim() || !passwordInput) {
+        setAuthError('Please enter both email and password.');
+        return;
+      }
+
+      setAuthLoading(true);
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: emailInput.trim(),
+          password: passwordInput,
+        });
+
+        if (error) {
+          setAuthError(error.message || 'Invalid email or password.');
+          setAuthLoading(false);
+          return;
+        }
+
+        if (data.session) {
+          setIsAuthenticated(true);
+          sessionStorage.setItem('cammystery_admin_auth', 'true');
+        }
+      } catch (err: any) {
+        setAuthError(err?.message || 'Failed to authenticate with Supabase.');
+      } finally {
+        setAuthLoading(false);
+      }
     } else {
-      setAuthError('Incorrect passcode. Try "cammystery2026".');
+      if (pinInput === 'cammystery2026' || pinInput === 'admin') {
+        setIsAuthenticated(true);
+        sessionStorage.setItem('cammystery_admin_auth', 'true');
+        setAuthError('');
+      } else {
+        setAuthError('Incorrect passcode.');
+      }
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('Sign out error:', e);
+    }
     setIsAuthenticated(false);
     sessionStorage.removeItem('cammystery_admin_auth');
   };
@@ -250,23 +316,87 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
             CaM-Mystery CMS
           </h1>
           <p className="text-xs text-neutral-500 mb-6">
-            Enter the studio administrator passcode to manage portfolio, prices, hero slides, and enquiries.
+            Sign in with your admin credentials to manage portfolio, prices, hero slides, and enquiries.
           </p>
 
+          {/* Auth Mode Toggle */}
+          <div className="flex border border-neutral-200 rounded-xs p-0.5 mb-5 bg-neutral-100 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('supabase');
+                setAuthError('');
+              }}
+              className={`flex-1 py-1.5 font-medium transition-colors ${
+                authMode === 'supabase'
+                  ? 'bg-white text-neutral-900 shadow-xs'
+                  : 'text-neutral-500 hover:text-neutral-800'
+              }`}
+            >
+              Supabase Account
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('pin');
+                setAuthError('');
+              }}
+              className={`flex-1 py-1.5 font-medium transition-colors ${
+                authMode === 'pin'
+                  ? 'bg-white text-neutral-900 shadow-xs'
+                  : 'text-neutral-500 hover:text-neutral-800'
+              }`}
+            >
+              Passcode Backup
+            </button>
+          </div>
+
           <form onSubmit={handleLogin} className="space-y-4 text-left">
-            <div>
-              <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1 font-medium">
-                Admin Passcode
-              </label>
-              <input
-                type="password"
-                placeholder="Default: cammystery2026"
-                value={pinInput}
-                onChange={(e) => setPinInput(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
-                autoFocus
-              />
-            </div>
+            {authMode === 'supabase' ? (
+              <>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1 font-medium">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="admin@cammystery.com"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                    autoFocus
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1 font-medium">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                    required
+                  />
+                </div>
+              </>
+            ) : (
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1 font-medium">
+                  Admin Passcode
+                </label>
+                <input
+                  type="password"
+                  placeholder="Enter passcode"
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  autoFocus
+                />
+              </div>
+            )}
 
             {authError && (
               <p className="text-xs text-rose-600 font-sans">{authError}</p>
@@ -274,14 +404,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white text-xs uppercase tracking-[0.2em] font-medium transition-colors cursor-pointer"
+              disabled={authLoading}
+              className="w-full py-2.5 bg-neutral-900 hover:bg-neutral-800 disabled:bg-neutral-500 text-white text-xs uppercase tracking-[0.2em] font-medium transition-colors cursor-pointer flex items-center justify-center gap-2"
             >
-              Sign In to CMS
+              {authLoading ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Authenticating...</span>
+                </>
+              ) : (
+                <span>Sign In to CMS</span>
+              )}
             </button>
           </form>
 
           <div className="mt-8 pt-6 border-t border-neutral-100 flex justify-between items-center text-xs text-neutral-400">
-            <span>Passcode hint: cammystery2026</span>
+            <span>{authMode === 'supabase' ? 'Supabase Auth' : 'Passcode: cammystery2026'}</span>
             <button
               onClick={() => onNavigate('HOME')}
               className="hover:text-neutral-800 underline cursor-pointer"
