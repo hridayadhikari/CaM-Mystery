@@ -1,35 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { NavPage, SelectedWorkItem } from '../types';
-import { HERO_SLIDES, SELECTED_WORK, TESTIMONIALS } from '../data/content';
-import { Play } from 'lucide-react';
+import { NavPage, SelectedWorkItem, WeddingProject } from '../types';
+import { Play, Images, ChevronRight, MapPin, Calendar } from 'lucide-react';
 import { ScrollReveal } from '../components/ScrollReveal';
+import { useCMS } from '../lib/cmsStore';
 
 interface HomeViewProps {
-  onNavigate: (page: NavPage) => void;
+  onNavigate: (page: NavPage, pkg?: string, initialPortfolioTab?: 'photos' | 'projects') => void;
   onOpenLightbox: (item: SelectedWorkItem) => void;
   onOpenVideo: () => void;
+  onOpenProject?: (project: WeddingProject) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
   onNavigate,
   onOpenLightbox,
   onOpenVideo,
+  onOpenProject,
 }) => {
+  const { heroSlides, selectedWork, testimonials, videoFeature, weddingProjects } = useCMS();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Auto advance hero slider every 6 seconds
   useEffect(() => {
+    if (heroSlides.length === 0) return;
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, []);
+  }, [heroSlides.length]);
 
   return (
     <div className="w-full">
       {/* 1. Hero Carousel taking the place of the transparent header at the very top */}
       <section className="relative w-full h-screen min-h-[640px] max-h-[1100px] bg-neutral-950 overflow-hidden">
-        {HERO_SLIDES.map((slide, idx) => (
+        {heroSlides.map((slide, idx) => (
           <div
             key={slide.id}
             className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
@@ -39,7 +43,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <img
               src={slide.imageUrl}
               alt={slide.title}
-              className="w-full h-full object-cover object-center filter brightness-[0.82] contrast-[1.04]"
+              className="w-full h-full object-cover filter brightness-[0.82] contrast-[1.04]"
+              style={{ objectPosition: 'center 18%' }}
             />
             {/* Subtle top gradient for transparent header legibility and bottom gradient for indicators */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/65 pointer-events-none" />
@@ -48,7 +53,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         {/* Carousel indicators (3 dashes at bottom) */}
         <div className="absolute bottom-10 left-0 right-0 z-20 flex justify-center items-center space-x-3">
-          {HERO_SLIDES.map((_, idx) => (
+          {heroSlides.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentSlide(idx)}
@@ -93,48 +98,177 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         {/* 8-Photo Grid: 4 columns x 2 rows */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-          {SELECTED_WORK.map((item, idx) => (
-            <ScrollReveal
-              key={item.id}
-              delay={(idx % 4) * 0.07}
-              distance={14}
-              duration={0.55}
-            >
-              <div
-                onClick={() => onOpenLightbox(item)}
-                className="group relative aspect-[4/5] bg-neutral-100 overflow-hidden cursor-pointer"
+          {(() => {
+            const featuredList = selectedWork.filter((item) => item.isFeatured);
+            const displayItems = featuredList.length > 0 ? featuredList : selectedWork.slice(0, 8);
+            return displayItems.map((item, idx) => (
+              <ScrollReveal
+                key={item.id}
+                delay={(idx % 4) * 0.07}
+                distance={14}
+                duration={0.55}
               >
-                <img
-                  src={item.imageUrl}
-                  alt={item.title}
-                  className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 filter brightness-[0.97]"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                  <span className="text-[10px] tracking-[0.2em] uppercase text-white/80">
-                    {item.category}
-                  </span>
-                  <span className="font-serif text-white text-sm font-light mt-0.5">
-                    {item.title}
-                  </span>
+                  <div
+                    onClick={() => onOpenLightbox(item)}
+                    className="group relative aspect-[4/5] bg-neutral-100 overflow-hidden cursor-pointer"
+                  >
+                    <img
+                      src={item.imageUrl}
+                      alt={item.title}
+                      className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105 filter brightness-[0.97]"
+                      loading="lazy"
+                    />
+                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                    <span className="text-[10px] tracking-[0.2em] uppercase text-white/80">
+                      {item.category}
+                    </span>
+                    <span className="font-serif text-white text-sm font-light mt-0.5">
+                      {item.title}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </ScrollReveal>
-          ))}
+              </ScrollReveal>
+            ));
+          })()}
         </div>
 
         {/* Link to portfolio */}
         <ScrollReveal distance={12} delay={0.1} className="text-center mt-12 mb-16">
           <button
             id="home-view-portfolio-link"
-            onClick={() => onNavigate('PORTFOLIO')}
+            onClick={() => onNavigate('PORTFOLIO', undefined, 'photos')}
             className="inline-flex items-center text-xs tracking-[0.25em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
           >
-            <span>VIEW THE PORTFOLIO</span>
+            <span>VIEW ALL PORTFOLIO PHOTOS</span>
             <span className="ml-2 font-sans text-sm">→</span>
           </button>
         </ScrollReveal>
       </section>
+
+      {/* 3.5. Featured Real Wedding Projects Section */}
+      {weddingProjects.length > 0 && (
+        <section className="py-20 sm:py-28 px-6 sm:px-12 max-w-7xl mx-auto border-t border-neutral-100 bg-[#fbfbfb]">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 sm:mb-14 gap-6">
+            <ScrollReveal distance={14} className="space-y-3 max-w-xl">
+              <span className="text-[11px] tracking-[0.25em] uppercase text-neutral-400 font-medium">
+                FEATURED WEDDING STORIES
+              </span>
+              <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl text-neutral-900 font-normal tracking-tight leading-[1.15]">
+                Real Weddings &amp; Couple Chronicles
+              </h2>
+              <p className="text-neutral-500 font-sans text-xs sm:text-sm leading-relaxed">
+                Step into complete wedding celebrations — from intimate couple portraits to joyous traditions and sacred moments.
+              </p>
+            </ScrollReveal>
+
+            <ScrollReveal distance={14} delay={0.1}>
+              <button
+                onClick={() => onNavigate('PORTFOLIO', undefined, 'projects')}
+                className="inline-flex items-center gap-2 px-5 py-3 border border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800 text-xs tracking-[0.2em] uppercase font-medium transition-colors cursor-pointer rounded-xs"
+              >
+                <span>EXPLORE ALL PROJECTS</span>
+                <ChevronRight size={14} />
+              </button>
+            </ScrollReveal>
+          </div>
+
+          {/* Cards Grid: Showcase top 3 real wedding projects */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {weddingProjects.slice(0, 3).map((project, idx) => (
+              <ScrollReveal
+                key={project.id}
+                delay={idx * 0.1}
+                distance={18}
+                duration={0.6}
+              >
+                <div
+                  onClick={() => {
+                    if (onOpenProject) {
+                      onOpenProject(project);
+                    } else {
+                      onNavigate('PORTFOLIO', undefined, 'projects');
+                    }
+                  }}
+                  className="group bg-white border border-neutral-200/80 hover:border-neutral-900/50 rounded-xs overflow-hidden transition-all duration-500 hover:shadow-xl cursor-pointer flex flex-col h-full"
+                >
+                  {/* Image cover */}
+                  <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
+                    <img
+                      src={project.coverImage}
+                      alt={project.coupleNames}
+                      className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent opacity-80 group-hover:opacity-95 transition-opacity" />
+
+                    {/* Photo count tag */}
+                    <div className="absolute top-3 right-3 bg-neutral-950/80 backdrop-blur-md text-white text-[10px] tracking-wider px-2.5 py-1 rounded-xs flex items-center gap-1.5 border border-white/10">
+                      <Images size={12} />
+                      <span>{project.images?.length || 1} Photos</span>
+                    </div>
+
+                    {/* Couple names on cover */}
+                    <div className="absolute bottom-3.5 left-4 right-4 text-white">
+                      <span className="text-[10px] tracking-[0.2em] uppercase text-neutral-300 block mb-1">
+                        COUPLE ARCHIVE
+                      </span>
+                      <h3 className="font-serif text-xl sm:text-2xl font-light leading-snug">
+                        {project.coupleNames}
+                      </h3>
+                    </div>
+                  </div>
+
+                  {/* Body content */}
+                  <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                    <div className="space-y-2">
+                      <h4 className="font-serif text-base text-neutral-900 font-medium group-hover:text-neutral-600 transition-colors">
+                        {project.title}
+                      </h4>
+
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-neutral-500 text-xs">
+                        {project.location && (
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin size={12} className="text-neutral-400" />
+                            {project.location}
+                          </span>
+                        )}
+                        {project.date && (
+                          <span className="inline-flex items-center gap-1">
+                            <Calendar size={12} className="text-neutral-400" />
+                            {project.date}
+                          </span>
+                        )}
+                      </div>
+
+                      {project.description && (
+                        <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed pt-1">
+                          {project.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-neutral-100 flex items-center justify-between text-neutral-900 text-xs tracking-wider uppercase font-medium">
+                      <span>View Couple &amp; Ceremonies</span>
+                      <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+
+          {/* Bottom CTA to Projects */}
+          <ScrollReveal distance={12} delay={0.15} className="text-center mt-12">
+            <button
+              onClick={() => onNavigate('PORTFOLIO', undefined, 'projects')}
+              className="inline-flex items-center text-xs tracking-[0.22em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
+            >
+              <span>SEE ALL WEDDING STORIES IN PORTFOLIO</span>
+              <span className="ml-2 font-sans text-sm">→</span>
+            </button>
+          </ScrollReveal>
+        </section>
+      )}
 
       {/* 4. Pre-Wedding Cinema & Films Section */}
       <section className="py-20 sm:py-28 px-6 sm:px-12 max-w-6xl mx-auto border-t border-neutral-100">
@@ -153,8 +287,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
               Films that play like memory.
             </h2>
             <p className="text-neutral-600 font-sans text-sm sm:text-base leading-relaxed">
-              Cinematic wedding and pre-wedding films built from the sound and movement a photograph
-              cannot hold — vows, laughter, and picturesque journeys.
+              {videoFeature.description ||
+                'Cinematic wedding and pre-wedding films built from the sound and movement a photograph cannot hold — vows, laughter, and picturesque journeys.'}
             </p>
             <div className="pt-2">
               <button
@@ -175,26 +309,27 @@ export const HomeView: React.FC<HomeViewProps> = ({
               className="relative aspect-[16/10] bg-neutral-950 rounded-sm overflow-hidden group cursor-pointer shadow-xl border border-neutral-200"
             >
               <video
+                key={videoFeature.videoUrl}
+                src={videoFeature.videoUrl}
                 className="w-full h-full object-cover filter brightness-[0.88] group-hover:brightness-[0.98] transition-all duration-700"
                 muted
                 loop
                 playsInline
                 autoPlay
-                poster="https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1200&q=80"
-              >
-                <source
-                  src="https://res.cloudinary.com/naqb7hm2/video/upload/v1789134902/PRE_WEDDING_COMING_SOON_4K_ANKIT_ASHMITA_BALA_G_STUDIO_RISHIKESH_-_Bala-G_Studio_720p_h264_cnqgoj.mp4"
-                  type="video/mp4"
-                />
-              </video>
+                poster={videoFeature.posterUrl}
+              />
               <div className="absolute inset-0 bg-black/25 group-hover:bg-black/15 transition-colors flex items-center justify-center">
                 <div className="w-14 h-14 rounded-full bg-white/90 group-hover:bg-white text-neutral-900 flex items-center justify-center transition-all shadow-md group-hover:scale-110">
                   <Play size={20} className="fill-neutral-900 translate-x-0.5" />
                 </div>
               </div>
               <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-[11px] text-white/90 tracking-wider">
-                <span className="font-serif italic drop-shadow-sm">Ankit & Ashmita • Pre-Wedding</span>
-                <span className="uppercase text-[9px] tracking-widest bg-black/50 px-2 py-0.5 rounded-xs backdrop-blur-xs">Click to Play</span>
+                <span className="font-serif italic drop-shadow-sm">
+                  {videoFeature.title} • {videoFeature.subtitle}
+                </span>
+                <span className="uppercase text-[9px] tracking-widest bg-black/50 px-2 py-0.5 rounded-xs backdrop-blur-xs">
+                  Click to Play
+                </span>
               </div>
             </div>
           </ScrollReveal>
@@ -211,9 +346,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </ScrollReveal>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 sm:gap-14">
-            {TESTIMONIALS.map((testimonial, idx) => (
+            {testimonials.map((testimonial, idx) => (
               <ScrollReveal
-                key={idx}
+                key={testimonial.id || idx}
                 delay={idx * 0.12}
                 distance={16}
                 duration={0.65}
@@ -239,6 +374,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=2000&q=85"
             alt="Bride in lehenga at dusk"
             className="w-full h-full object-cover filter brightness-[0.4] contrast-[1.1]"
+            style={{ objectPosition: 'center 22%' }}
           />
           <div className="absolute inset-0 bg-black/60" />
         </div>

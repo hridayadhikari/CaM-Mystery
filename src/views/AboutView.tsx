@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { NavPage } from '../types';
-import { ABOUT_PARAGRAPHS, FAQ_ITEMS } from '../data/content';
+import { ABOUT_PARAGRAPHS } from '../data/content';
 import { Plus, Minus } from 'lucide-react';
 import { ScrollReveal } from '../components/ScrollReveal';
+import { useCMS } from '../lib/cmsStore';
 
 interface AboutViewProps {
   onNavigate: (page: NavPage) => void;
 }
 
 export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
+  const { faqItems, aboutImages } = useCMS();
   const [openFaqs, setOpenFaqs] = useState<string[]>([]);
 
   const toggleFaq = (id: string) => {
@@ -56,9 +58,9 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
           <ScrollReveal distance={20} delay={0.15} duration={0.7} className="lg:col-span-5 sticky top-28">
             <div className="aspect-[3/4] sm:aspect-[4/5] lg:aspect-[3/4.2] bg-neutral-100 overflow-hidden shadow-sm">
               <img
-                src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1200&q=85"
+                src={aboutImages.storyPortrait}
                 alt="Indian Bride in fine art bridal lehenga by window"
-                className="w-full h-full object-cover filter brightness-[0.98] contrast-[1.02]"
+                className="w-full h-full object-cover object-top filter brightness-[0.98] contrast-[1.02]"
               />
             </div>
           </ScrollReveal>
@@ -79,9 +81,9 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
             <ScrollReveal distance={16} delay={0} duration={0.6} className="space-y-6">
               <div className="aspect-[4/5] bg-neutral-100 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1601121141461-9d6647bca1ed?auto=format&fit=crop&w=800&q=80"
+                  src={aboutImages.howWeWork1}
                   alt="Intimate bridal smile"
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                  className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-700"
                 />
               </div>
               <h3 className="font-serif text-lg tracking-[0.2em] uppercase text-neutral-900 font-normal">
@@ -100,9 +102,9 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
             <ScrollReveal distance={16} delay={0.12} duration={0.6} className="space-y-6">
               <div className="aspect-[4/5] bg-neutral-100 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&w=800&q=80"
+                  src={aboutImages.howWeWork2}
                   alt="Intentional couple portrait"
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                  className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-700"
                 />
               </div>
               <h3 className="font-serif text-lg tracking-[0.2em] uppercase text-neutral-900 font-normal">
@@ -121,9 +123,9 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
             <ScrollReveal distance={16} delay={0.24} duration={0.6} className="space-y-6">
               <div className="aspect-[4/5] bg-neutral-100 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1583939411023-14783179e581?auto=format&fit=crop&w=800&q=80"
+                  src={aboutImages.howWeWork3}
                   alt="Eternal details and heirloom traditions"
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                  className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-700"
                 />
               </div>
               <h3 className="font-serif text-lg tracking-[0.2em] uppercase text-neutral-900 font-normal">
@@ -143,17 +145,18 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
 
       {/* 3. Common Questions FAQ Section */}
       <section className="relative w-full py-28 sm:py-36 px-6 sm:px-12 bg-neutral-950 overflow-hidden">
-        {/* Dark Background Photography with dynamic zoom on expanding questions */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Background Photography with dynamic zoom on expanding questions */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
           <img
-            src="https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=2000&q=85"
-            alt="Bride in dark moody wedding scene"
+            src={aboutImages.faqBackground}
+            alt="Bride in atmospheric ceremonial lights"
             style={{
               transform: `scale(${zoomScale})`,
+              objectPosition: 'center 25%',
             }}
-            className="w-full h-full object-cover filter brightness-[0.3] contrast-[1.15] transition-transform duration-1000 ease-out will-change-transform"
+            className="w-full h-full object-cover filter brightness-[0.6] contrast-[1.1] transition-transform duration-1000 ease-out will-change-transform"
           />
-          <div className="absolute inset-0 bg-black/70" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/70 to-black/80" />
         </div>
 
         <div className="relative z-10 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 sm:gap-16 items-start">
@@ -167,7 +170,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
 
           {/* Right Accordion */}
           <ScrollReveal distance={18} delay={0.1} duration={0.65} className="lg:col-span-7 divide-y divide-white/15">
-            {FAQ_ITEMS.map((faq) => {
+            {faqItems.map((faq) => {
               const isOpen = openFaqs.includes(faq.id);
               return (
                 <div key={faq.id} className="py-5">

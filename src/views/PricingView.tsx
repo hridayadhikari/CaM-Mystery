@@ -1,14 +1,15 @@
 import React from 'react';
 import { NavPage } from '../types';
-import { PRICING_PACKAGES } from '../data/content';
 import { Check } from 'lucide-react';
 import { ScrollReveal } from '../components/ScrollReveal';
+import { useCMS } from '../lib/cmsStore';
 
 interface PricingViewProps {
   onNavigate: (page: NavPage, selectedPackage?: string) => void;
 }
 
 export const PricingView: React.FC<PricingViewProps> = ({ onNavigate }) => {
+  const { pricingPackages } = useCMS();
   return (
     <div className="w-full">
       {/* 1. Header Section */}
@@ -30,7 +31,7 @@ export const PricingView: React.FC<PricingViewProps> = ({ onNavigate }) => {
       {/* 2. Three Pricing Cards */}
       <section className="pb-24 px-6 sm:px-10 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch pt-4">
-          {PRICING_PACKAGES.map((pkg, idx) => {
+          {pricingPackages.map((pkg, idx) => {
             const isPopular = pkg.isPopular;
             return (
               <ScrollReveal

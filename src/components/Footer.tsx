@@ -48,8 +48,15 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           </nav>
         </div>
 
-        {/* Right: Scroll to top */}
-        <div className="text-center md:text-right">
+        {/* Right: Scroll to top & discreet Admin access */}
+        <div className="flex items-center gap-4 text-center md:text-right">
+          <button
+            id="footer-admin-link"
+            onClick={() => onNavigate('ADMIN')}
+            className="text-[10px] tracking-[0.25em] uppercase text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer"
+          >
+            Studio CMS
+          </button>
           <button
             id="scroll-to-top"
             onClick={scrollToTop}

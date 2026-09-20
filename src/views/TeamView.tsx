@@ -1,44 +1,22 @@
 import React from 'react';
 import { NavPage } from '../types';
-import { STUDIO_INFO } from '../data/content';
 import { Camera, Film, Eye, Sparkles } from 'lucide-react';
 import { ScrollReveal } from '../components/ScrollReveal';
+import { useCMS } from '../lib/cmsStore';
 
 interface TeamViewProps {
   onNavigate: (page: NavPage) => void;
 }
 
+const iconMap = {
+  Camera,
+  Film,
+  Eye,
+  Sparkles,
+};
+
 export const TeamView: React.FC<TeamViewProps> = ({ onNavigate }) => {
-  const teamMembers = [
-    {
-      name: 'Sanjib Bhowmik',
-      role: 'Founder & Principal Photographer',
-      bio: 'With over a decade dedicated to wedding visual arts, Sanjib leads every primary commission, bringing an instinctive eye for unscripted intimacy, cultural nuance, and evocative natural light.',
-      imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80',
-      icon: Camera,
-    },
-    {
-      name: 'Rahul Debbarma',
-      role: 'Head of Cinematic Filmmaking',
-      bio: 'Mastering digital cinema cameras and delicate audio design, Rahul captures the movement, laughter, and sacred vows that transform memories into heirloom films.',
-      imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80',
-      icon: Film,
-    },
-    {
-      name: 'Priyanka Saha',
-      role: 'Lead Candid Artist & Drone Specialist',
-      bio: 'Specializing in fleeting emotional micro-moments and licensed aerial perspectives, Priyanka documents the joyful spontaneity of wedding celebrations.',
-      imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80',
-      icon: Eye,
-    },
-    {
-      name: 'Debjit Paul',
-      role: 'Master Colorist & Album Artisan',
-      bio: 'Dedicated to timeless color fidelity, skin-tone perfection, and handcrafted flush-mount fine-art albums designed to endure for generations.',
-      imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80',
-      icon: Sparkles,
-    },
-  ];
+  const { teamMembers, studioInfo } = useCMS();
 
   return (
     <div className="w-full">
@@ -53,7 +31,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ onNavigate }) => {
           </h1>
           <p className="text-neutral-600 font-sans text-xs sm:text-sm max-w-xl mx-auto leading-relaxed">
             We are a tight-knit collective of visual artists, cinematographers, and
-            storytellers led by {STUDIO_INFO.name}, united by a passion for authentic
+            storytellers led by {studioInfo.name}, united by a passion for authentic
             moments and timeless craft.
           </p>
         </ScrollReveal>
@@ -63,10 +41,10 @@ export const TeamView: React.FC<TeamViewProps> = ({ onNavigate }) => {
       <section className="pb-28 px-6 sm:px-10 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {teamMembers.map((member, idx) => {
-            const Icon = member.icon;
+            const Icon = (member.iconName && iconMap[member.iconName]) || Camera;
             return (
               <ScrollReveal
-                key={idx}
+                key={member.id || idx}
                 delay={idx * 0.08}
                 distance={16}
                 duration={0.6}
@@ -76,7 +54,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ onNavigate }) => {
                   <img
                     src={member.imageUrl}
                     alt={member.name}
-                    className="w-full h-full object-cover filter grayscale hover:grayscale-0 transition-all duration-700 hover:scale-105"
+                    className="w-full h-full object-cover object-top filter grayscale hover:grayscale-0 transition-all duration-700 hover:scale-105"
                   />
                 </div>
                 <div>
@@ -105,7 +83,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ onNavigate }) => {
             will be treasured for generations.”
           </p>
           <div className="text-[11px] tracking-[0.25em] uppercase text-neutral-400 font-medium">
-            — {STUDIO_INFO.name}, FOUNDER
+            — {studioInfo.name}, FOUNDER
           </div>
           <div className="pt-4">
             <button

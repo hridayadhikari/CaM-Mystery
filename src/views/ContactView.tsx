@@ -1,43 +1,87 @@
-import React, { useState } from 'react';
-import { STUDIO_INFO } from '../data/content';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown, CheckCircle2 } from 'lucide-react';
 import { ScrollReveal } from '../components/ScrollReveal';
+import { useCMS } from '../lib/cmsStore';
 
 interface ContactViewProps {
   initialPackage?: string;
 }
 
 export const ContactView: React.FC<ContactViewProps> = ({ initialPackage }) => {
+  const { studioInfo, pricingPackages, addEnquiry } = useCMS();
+
+  // Dynamic coverage options generated from CMS pricing packages + standard options
+  const cmsPackageOptions = pricingPackages.map((pkg) =>
+    pkg.coverage ? `${pkg.name} (${pkg.coverage})` : pkg.name
+  );
+
+  const fallbackOptions = [
+    'Pre-Wedding Shoot Only',
+    'Cinematic Film Only',
+    'Custom Package',
+  ];
+
+  const allCoverageOptions = Array.from(
+    new Set([
+      ...cmsPackageOptions,
+      ...pricingPackages.map((pkg) => pkg.name),
+      ...fallbackOptions,
+    ])
+  );
+
+  const coverageOptions = ['Choose an option', ...allCoverageOptions];
+
+  const findMatchingCoverage = (pkgName?: string) => {
+    if (!pkgName) return '';
+    const cleanPkg = pkgName.trim().toLowerCase();
+    const direct = allCoverageOptions.find((opt) => opt.toLowerCase() === cleanPkg);
+    if (direct) return direct;
+    const partial = allCoverageOptions.find(
+      (opt) => opt.toLowerCase().includes(cleanPkg) || cleanPkg.includes(opt.toLowerCase())
+    );
+    if (partial) return partial;
+    return pkgName;
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     eventDate: '',
     eventLocation: '',
-    coverageType: initialPackage || '',
+    coverageType: findMatchingCoverage(initialPackage),
     message: '',
     referralSource: '',
   });
 
+  // Automatically update selected package whenever initialPackage changes
+  useEffect(() => {
+    if (initialPackage) {
+      setFormData((prev) => ({
+        ...prev,
+        coverageType: findMatchingCoverage(initialPackage),
+      }));
+    }
+  }, [initialPackage, pricingPackages]);
+
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email) {
       alert('Please provide your name and email address.');
       return;
     }
+    await addEnquiry({
+      name: formData.name,
+      email: formData.email,
+      eventDate: formData.eventDate,
+      eventLocation: formData.eventLocation,
+      coverageType: formData.coverageType,
+      message: formData.message,
+      referralSource: formData.referralSource,
+    });
     setSubmitted(true);
   };
-
-  const coverageOptions = [
-    'Choose an option',
-    'Silver Package (2 Days)',
-    'Gold Package (2 Days)',
-    'Diamond Package (2 Days)',
-    'Pre-Wedding Shoot Only',
-    'Cinematic Film Only',
-    'Custom Package',
-  ];
 
   const referralOptions = [
     'Choose an option',
@@ -271,31 +315,31 @@ export const ContactView: React.FC<ContactViewProps> = ({ initialPackage }) => {
             STUDIO
           </span>
           <h2 className="font-serif text-2xl sm:text-3xl text-neutral-900 font-normal">
-            {STUDIO_INFO.name}
+            {studioInfo.name}
           </h2>
           <div className="space-y-1 text-xs sm:text-sm text-neutral-600 font-sans pt-1">
             <p>
               <a
-                href={`tel:${STUDIO_INFO.phone}`}
+                href={`tel:${studioInfo.phone}`}
                 className="hover:text-black transition-colors"
               >
-                {STUDIO_INFO.phone}
+                {studioInfo.phone}
               </a>
             </p>
             <p>
               <a
-                href={`mailto:${STUDIO_INFO.email}`}
+                href={`mailto:${studioInfo.email}`}
                 className="hover:text-black transition-colors"
               >
-                {STUDIO_INFO.email}
+                {studioInfo.email}
               </a>
             </p>
-            <p className="text-neutral-500">{STUDIO_INFO.address}</p>
+            <p className="text-neutral-500">{studioInfo.address}</p>
           </div>
           <div className="pt-3">
             <a
               id="view-on-google-maps"
-              href={STUDIO_INFO.mapsUrl}
+              href={studioInfo.mapsUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block text-[11px] tracking-[0.22em] uppercase text-neutral-900 border-b border-neutral-900 pb-0.5 hover:text-neutral-600 hover:border-neutral-400 transition-colors"
