@@ -293,11 +293,11 @@ export const ContactView: React.FC<ContactViewProps> = ({ initialPackage }) => {
               </div>
 
               {/* Submit Button */}
-              <div className="pt-4">
+              <div className="pt-2 sm:pt-4">
                 <button
                   id="contact-submit-btn"
                   type="submit"
-                  className="w-full sm:w-auto px-8 py-3.5 bg-neutral-950 text-white hover:bg-neutral-800 transition-colors text-xs tracking-[0.22em] uppercase font-medium cursor-pointer"
+                  className="w-auto inline-flex items-center justify-center px-5 sm:px-8 py-2.5 sm:py-3.5 bg-neutral-950 text-white hover:bg-neutral-800 transition-colors text-[10px] sm:text-xs tracking-[0.14em] sm:tracking-[0.22em] uppercase font-medium cursor-pointer whitespace-nowrap"
                 >
                   SEND MY ENQUIRY
                 </button>

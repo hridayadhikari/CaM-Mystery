@@ -21,13 +21,16 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
   const { selectedWork, videoFeature, weddingProjects } = useCMS();
   const [portfolioTab, setPortfolioTab] = useState<'photos' | 'projects'>(initialTab);
   const [activeCategory, setActiveCategory] = useState<string>('all');
-  const [showArchivedStories, setShowArchivedStories] = useState<boolean>(true);
 
-  const categories = ['all', 'Pre Wedding', 'Wedding Day', 'Bridal Portrait', 'Celebration', 'Traditional Ceremony'];
+  // Derive categories dynamically so all standalone photo categories are represented
+  const dynamicCategories = Array.from(
+    new Set(selectedWork.map((item) => item.category?.trim()).filter(Boolean) as string[])
+  );
+  const categories = ['all', ...dynamicCategories];
 
   const filteredWork = activeCategory === 'all'
     ? selectedWork
-    : selectedWork.filter((item) => item.category === activeCategory);
+    : selectedWork.filter((item) => item.category?.trim().toLowerCase() === activeCategory.trim().toLowerCase());
 
   return (
     <div className="w-full">
@@ -60,32 +63,32 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
       </section>
 
       {/* 3. Tabs Menu: Positioned cleanly UNDER the Showcase Image */}
-      <section className="max-w-7xl mx-auto px-6 sm:px-12 pt-8 sm:pt-10">
-        <div className="flex border-b border-neutral-200">
+      <section className="max-w-7xl mx-auto px-4 sm:px-12 pt-6 sm:pt-10">
+        <div className="flex border-b border-neutral-200 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <button
             onClick={() => setPortfolioTab('photos')}
-            className={`pb-3.5 px-3 sm:px-6 text-xs sm:text-sm tracking-[0.18em] uppercase font-medium transition-colors cursor-pointer border-b-2 -mb-px flex items-center gap-2 ${
+            className={`pb-2.5 sm:pb-3.5 px-1 sm:px-6 text-[10px] sm:text-sm tracking-[0.1em] sm:tracking-[0.18em] uppercase font-medium transition-colors cursor-pointer border-b-2 -mb-px flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 ${
               portfolioTab === 'photos'
                 ? 'border-neutral-900 text-neutral-950 font-semibold'
                 : 'border-transparent text-neutral-400 hover:text-neutral-700'
             }`}
           >
             <span>Curated Photos</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 font-normal">
+            <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 font-normal">
               {selectedWork.length}
             </span>
           </button>
 
           <button
             onClick={() => setPortfolioTab('projects')}
-            className={`pb-3.5 px-3 sm:px-6 text-xs sm:text-sm tracking-[0.18em] uppercase font-medium transition-colors cursor-pointer border-b-2 -mb-px flex items-center gap-2 ml-4 sm:ml-8 ${
+            className={`pb-2.5 sm:pb-3.5 px-1 sm:px-6 text-[10px] sm:text-sm tracking-[0.1em] sm:tracking-[0.18em] uppercase font-medium transition-colors cursor-pointer border-b-2 -mb-px flex items-center gap-1.5 sm:gap-2 ml-4 sm:ml-8 whitespace-nowrap shrink-0 ${
               portfolioTab === 'projects'
                 ? 'border-neutral-900 text-neutral-950 font-semibold'
                 : 'border-transparent text-neutral-400 hover:text-neutral-700'
             }`}
           >
             <span>Wedding Projects</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 font-normal">
+            <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600 font-normal">
               {weddingProjects.length}
             </span>
           </button>
@@ -97,30 +100,15 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
         <>
           {/* Curated Photos Gallery */}
           <section className="py-14 sm:py-20 px-6 text-center">
-            {!showArchivedStories ? (
-              <ScrollReveal distance={14} className="space-y-6 max-w-md mx-auto">
-                <p className="text-neutral-500 font-sans text-sm tracking-wide">
-                  No items in this section yet.
-                </p>
-                <div>
-                  <button
-                    id="portfolio-view-archives-btn"
-                    onClick={() => setShowArchivedStories(true)}
-                    className="text-[11px] tracking-[0.2em] uppercase text-neutral-400 hover:text-neutral-900 border-b border-neutral-300 hover:border-neutral-900 pb-0.5 transition-all cursor-pointer"
-                  >
-                    Browse Featured Wedding Galleries
-                  </button>
-                </div>
-              </ScrollReveal>
-            ) : (
-              <div className="max-w-7xl mx-auto space-y-12">
-                {/* Category Filter Pills */}
-                <ScrollReveal distance={12} className="flex flex-wrap justify-center gap-3">
+            <div className="max-w-7xl mx-auto space-y-12">
+              {/* Category Filter Pills: Single scrollable row on mobile, centered on desktop */}
+              <ScrollReveal distance={12} className="w-full">
+                <div className="flex items-center overflow-x-auto gap-2 sm:gap-3 justify-start sm:justify-center py-2 px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                   {categories.map((cat) => (
                     <button
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
-                      className={`text-[11px] tracking-[0.2em] uppercase px-4 py-2 border transition-colors cursor-pointer ${
+                      className={`whitespace-nowrap shrink-0 text-[10px] sm:text-[11px] tracking-[0.16em] sm:tracking-[0.2em] uppercase px-3.5 sm:px-4 py-1.5 sm:py-2 border transition-colors cursor-pointer ${
                         activeCategory === cat
                           ? 'border-neutral-900 bg-neutral-900 text-white'
                           : 'border-neutral-200 text-neutral-600 hover:border-neutral-400'
@@ -129,64 +117,74 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                       {cat}
                     </button>
                   ))}
-                </ScrollReveal>
+                </div>
+              </ScrollReveal>
 
-                {/* Special Highlight for Pre-Wedding Cinema */}
-                {(activeCategory === 'all' || activeCategory === 'Pre Wedding') && (
-                  <ScrollReveal distance={18} duration={0.65}>
-                    <div className="bg-neutral-950 text-white rounded-sm overflow-hidden p-6 sm:p-10 border border-neutral-800 shadow-xl">
-                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                        <div className="lg:col-span-5 space-y-4 text-left">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-[10px] tracking-[0.25em] uppercase text-neutral-400 font-medium">
-                              FEATURED PRE-WEDDING FILM
-                            </span>
-                            <span className="text-[9px] tracking-wider uppercase font-semibold px-2 py-0.5 bg-white text-neutral-950 rounded-xs">
-                              TEASER
-                            </span>
+              {/* Special Highlight for Pre-Wedding Cinema */}
+              {(activeCategory === 'all' || activeCategory.toLowerCase() === 'pre wedding') && (
+                <ScrollReveal distance={18} duration={0.65}>
+                  <div className="bg-neutral-950 text-white rounded-sm overflow-hidden p-0 sm:p-8 lg:p-10 border border-neutral-800 shadow-xl">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 items-center">
+                      {/* Video Frame - On mobile placed first, edge-to-edge, taking the majority of the card */}
+                      <div
+                        onClick={onOpenVideo}
+                        className="lg:col-span-7 order-1 lg:order-2 relative aspect-[16/10] sm:aspect-[16/9] bg-black sm:rounded-xs overflow-hidden cursor-pointer group shadow-2xl"
+                      >
+                        <video
+                          key={videoFeature.videoUrl}
+                          src={videoFeature.videoUrl}
+                          className="w-full h-full object-cover filter brightness-[0.88] group-hover:brightness-100 transition-all duration-500"
+                          muted
+                          loop
+                          playsInline
+                          autoPlay
+                          poster={videoFeature.posterUrl}
+                        />
+                        <div className="absolute inset-0 bg-black/25 group-hover:bg-black/15 transition-colors flex items-center justify-center">
+                          <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-white text-neutral-900 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                            <Play size={20} className="fill-neutral-900 translate-x-0.5" />
                           </div>
-                          <h3 className="font-serif text-2xl sm:text-3xl text-neutral-100 font-normal">
-                            {videoFeature.title}
-                          </h3>
-                          <p className="text-neutral-400 text-sm leading-relaxed">
-                            {videoFeature.description}
-                          </p>
-                          {onOpenVideo && (
-                            <button
-                              onClick={onOpenVideo}
-                              className="inline-flex items-center text-xs tracking-[0.2em] uppercase text-white border-b border-white/60 hover:border-white pb-1 transition-colors cursor-pointer pt-2"
-                            >
-                              <span>PLAY FILM TEASER</span>
-                              <span className="ml-2">→</span>
-                            </button>
-                          )}
                         </div>
-                        <div
-                          onClick={onOpenVideo}
-                          className="lg:col-span-7 relative aspect-[16/9] bg-black rounded-xs overflow-hidden cursor-pointer group shadow-2xl"
-                        >
-                          <video
-                            key={videoFeature.videoUrl}
-                            src={videoFeature.videoUrl}
-                            className="w-full h-full object-cover filter brightness-[0.88] group-hover:brightness-100 transition-all duration-500"
-                            muted
-                            loop
-                            playsInline
-                            autoPlay
-                            poster={videoFeature.posterUrl}
-                          />
-                          <div className="absolute inset-0 bg-black/30 group-hover:bg-black/15 transition-colors flex items-center justify-center">
-                            <div className="w-12 h-12 rounded-full bg-white text-neutral-900 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                              <Play size={18} className="fill-neutral-900 translate-x-0.5" />
-                            </div>
-                          </div>
+                        <div className="absolute bottom-2.5 right-3 text-[9px] tracking-widest uppercase bg-black/60 px-2 py-0.5 rounded-xs text-white/90 backdrop-blur-xs">
+                          Tap to Play
                         </div>
                       </div>
-                    </div>
-                  </ScrollReveal>
-                )}
 
-                {/* Gallery Grid */}
+                      {/* Text info - Concise on mobile so video remains the focus */}
+                      <div className="lg:col-span-5 order-2 lg:order-1 px-5 pb-5 pt-1 sm:p-0 space-y-2.5 sm:space-y-4 text-left">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[9px] sm:text-[10px] tracking-[0.2em] sm:tracking-[0.25em] uppercase text-neutral-400 font-medium">
+                            FEATURED PRE-WEDDING FILM
+                          </span>
+                          <span className="text-[8px] sm:text-[9px] tracking-wider uppercase font-semibold px-1.5 sm:px-2 py-0.5 bg-white text-neutral-950 rounded-xs">
+                            TEASER
+                          </span>
+                        </div>
+                        <h3 className="font-serif text-xl sm:text-2xl lg:text-3xl text-neutral-100 font-normal">
+                          {videoFeature.title}
+                        </h3>
+                        <p className="text-neutral-400 text-xs sm:text-sm leading-relaxed line-clamp-2 sm:line-clamp-none">
+                          {videoFeature.description}
+                        </p>
+                        {onOpenVideo && (
+                          <div className="pt-1">
+                            <button
+                              onClick={onOpenVideo}
+                              className="inline-flex items-center text-[10px] sm:text-xs tracking-[0.15em] sm:tracking-[0.2em] uppercase text-white border-b border-white/60 hover:border-white pb-1 transition-colors cursor-pointer whitespace-nowrap"
+                            >
+                              <span>PLAY FILM TEASER</span>
+                              <span className="ml-1.5 sm:ml-2 font-sans text-xs sm:text-sm">→</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </ScrollReveal>
+              )}
+
+              {/* Gallery Grid */}
+              {filteredWork.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-left">
                   {filteredWork.map((item, idx) => (
                     <ScrollReveal
@@ -217,17 +215,14 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                     </ScrollReveal>
                   ))}
                 </div>
-
-                <div className="pt-8">
-                  <button
-                    onClick={() => setShowArchivedStories(false)}
-                    className="text-xs text-neutral-400 hover:text-neutral-700 tracking-wider underline cursor-pointer"
-                  >
-                    Reset to default view
-                  </button>
+              ) : (
+                <div className="py-12 text-center">
+                  <p className="text-neutral-400 text-xs tracking-wider uppercase">
+                    No photos found in this category
+                  </p>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </section>
         </>
       ) : (

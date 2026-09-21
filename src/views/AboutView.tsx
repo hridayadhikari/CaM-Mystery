@@ -36,9 +36,9 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
               About CaM-Mystery
             </h1>
 
-            <div className="space-y-5 text-neutral-600 font-sans text-sm sm:text-[15px] leading-relaxed pt-2">
+            <div className="space-y-5 text-neutral-600 font-sans text-sm sm:text-[15px] leading-relaxed pt-2 text-justify">
               {ABOUT_PARAGRAPHS.map((para, idx) => (
-                <p key={idx}>{para}</p>
+                <p key={idx} className="text-justify">{para}</p>
               ))}
             </div>
 
@@ -89,7 +89,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
               <h3 className="font-serif text-lg tracking-[0.2em] uppercase text-neutral-900 font-normal">
                 INTIMATE
               </h3>
-              <p className="text-neutral-600 font-sans text-xs sm:text-sm leading-relaxed">
+              <p className="text-neutral-600 font-sans text-xs sm:text-sm leading-relaxed text-justify">
                 Trust is the foundation of every great photograph. Before we raise
                 the camera we spend time understanding who you are, how you move, and
                 what makes you laugh. That familiarity shows in the images — they look
@@ -110,7 +110,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
               <h3 className="font-serif text-lg tracking-[0.2em] uppercase text-neutral-900 font-normal">
                 INTENTIONAL
               </h3>
-              <p className="text-neutral-600 font-sans text-xs sm:text-sm leading-relaxed">
+              <p className="text-neutral-600 font-sans text-xs sm:text-sm leading-relaxed text-justify">
                 We approach each wedding as a unique creative brief. We study the
                 venue, the light, the timeline, and the emotional arc of the day long
                 before it begins. When we're on the floor we move with purpose —
@@ -131,7 +131,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
               <h3 className="font-serif text-lg tracking-[0.2em] uppercase text-neutral-900 font-normal">
                 ETERNAL
               </h3>
-              <p className="text-neutral-600 font-sans text-xs sm:text-sm leading-relaxed">
+              <p className="text-neutral-600 font-sans text-xs sm:text-sm leading-relaxed text-justify">
                 Trends come and go; love doesn't. Our editing philosophy mirrors
                 that: clean, timeless tones that won't feel dated in ten years. The
                 photographs and films we create together are meant to be printed
@@ -177,7 +177,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
                   <button
                     id={`faq-toggle-${faq.id}`}
                     onClick={() => toggleFaq(faq.id)}
-                    className="w-full flex items-center justify-between text-left py-2 group cursor-pointer focus:outline-none"
+                    className="w-full flex items-center justify-between text-left py-2 group cursor-pointer focus:outline-none whitespace-normal"
                     aria-expanded={isOpen}
                   >
                     <span className="text-sm sm:text-base font-sans text-neutral-200 group-hover:text-white transition-colors">
@@ -206,10 +206,10 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
           <button
             id="about-explore-work-btn"
             onClick={() => onNavigate('PORTFOLIO')}
-            className="inline-flex items-center text-xs tracking-[0.25em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
+            className="inline-flex items-center text-[10px] sm:text-xs tracking-[0.16em] sm:tracking-[0.25em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
           >
             <span>EXPLORE THE WORK</span>
-            <span className="ml-2 font-sans text-sm">→</span>
+            <span className="ml-1.5 sm:ml-2 font-sans text-xs sm:text-sm">→</span>
           </button>
         </ScrollReveal>
       </section>

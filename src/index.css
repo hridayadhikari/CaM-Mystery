@@ -9,5 +9,14 @@
   body {
     font-family: var(--font-sans);
   }
+
+  p {
+    text-align: justify;
+    text-justify: inter-word;
+  }
+
+  button {
+    white-space: nowrap;
+  }
 }
 

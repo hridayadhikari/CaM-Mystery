@@ -317,17 +317,42 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       // 7. Fetch Enquiries
-      const { data: enqData, error: enqError } = await supabase
-        .from('enquiries')
-        .select('*')
-        .order('createdAt', { ascending: false });
+      try {
+        let enqData: any[] | null = null;
+        let enqError: any = null;
 
-      if (enqError) {
-        console.warn('[CMS] enquiries fetch error:', enqError.message);
-      } else if (enqData) {
-        const normalized = enqData.map(normalizeEnquiry);
-        setEnquiries(normalized);
-        setLocal('enquiries', normalized);
+        // In Supabase/Postgres, column names are lowercase (createdat)
+        const resEnq = await supabase
+          .from('enquiries')
+          .select('*')
+          .order('createdat', { ascending: false });
+
+        if (resEnq.error) {
+          // Fallback: order by id if createdat fails, or plain select
+          const fallbackRes = await supabase
+            .from('enquiries')
+            .select('*')
+            .order('id', { ascending: false });
+          if (fallbackRes.error) {
+            const plainRes = await supabase.from('enquiries').select('*');
+            enqData = plainRes.data;
+            enqError = plainRes.error;
+          } else {
+            enqData = fallbackRes.data;
+          }
+        } else {
+          enqData = resEnq.data;
+        }
+
+        if (enqError) {
+          console.warn('[CMS] enquiries fetch error:', enqError.message);
+        } else if (enqData) {
+          const normalized = enqData.map(normalizeEnquiry);
+          setEnquiries(normalized);
+          setLocal('enquiries', normalized);
+        }
+      } catch (err) {
+        console.warn('[CMS] enquiries fetch exception:', err);
       }
     } catch (err) {
       console.warn('[CMS] Supabase load error:', err);
@@ -355,6 +380,21 @@ const toDbTeamMember = (item: Partial<TeamMember>) => {
   if (item.bio !== undefined) res.bio = item.bio;
   if (item.imageUrl !== undefined) res.imageurl = item.imageUrl;
   if (item.iconName !== undefined) res.iconname = item.iconName;
+  return res;
+};
+
+const toDbEnquiry = (item: Partial<EnquiryItem>) => {
+  const res: Record<string, any> = {};
+  if (item.id !== undefined) res.id = String(item.id);
+  if (item.name !== undefined) res.name = item.name;
+  if (item.email !== undefined) res.email = item.email;
+  if (item.eventDate !== undefined) res.eventdate = item.eventDate;
+  if (item.eventLocation !== undefined) res.eventlocation = item.eventLocation;
+  if (item.coverageType !== undefined) res.coveragetype = item.coverageType;
+  if (item.message !== undefined) res.message = item.message;
+  if (item.referralSource !== undefined) res.referralsource = item.referralSource;
+  if (item.createdAt !== undefined) res.createdat = item.createdAt;
+  if (item.isRead !== undefined) res.isread = Boolean(item.isRead);
   return res;
 };
 
@@ -567,14 +607,14 @@ const toDbTeamMember = (item: Partial<TeamMember>) => {
     const updated = [newEnquiry, ...enquiries];
     setEnquiries(updated);
     setLocal('enquiries', updated);
-    await safeSupabaseWrite('enquiries', 'insert', newEnquiry);
+    await safeSupabaseWrite('enquiries', 'insert', toDbEnquiry(newEnquiry));
   };
 
   const markEnquiryRead = async (id: string) => {
     const updated = enquiries.map((e) => (e.id === id ? { ...e, isRead: true } : e));
     setEnquiries(updated);
     setLocal('enquiries', updated);
-    await safeSupabaseWrite('enquiries', 'update', { isRead: true }, 'id', id);
+    await safeSupabaseWrite('enquiries', 'update', { isread: true }, 'id', id);
   };
 
   const deleteEnquiry = async (id: string) => {
@@ -595,6 +635,7 @@ const toDbTeamMember = (item: Partial<TeamMember>) => {
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'video_feature');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'about_images');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'wedding_projects');
+    localStorage.removeItem(STORAGE_KEY_PREFIX + 'enquiries');
     fetchAllFromDB();
   };
 

@@ -24,6 +24,16 @@ export const CloudinaryVideoUpload: React.FC<CloudinaryVideoUploadProps> = ({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
 
+  React.useEffect(() => {
+    if (confirmOpen || modalPreviewOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [confirmOpen, modalPreviewOpen]);
+
   // Sync state when currentUrl prop updates
   React.useEffect(() => {
     setPreview(currentUrl);
@@ -156,23 +166,11 @@ export const CloudinaryVideoUpload: React.FC<CloudinaryVideoUploadProps> = ({
             )}
           </div>
 
-          <div className="text-[11px] text-neutral-400">
-            {helperText || 'Upload MP4/MOV teaser video directly to Cloudinary (videos folder)'}
-          </div>
-
-          {/* Or manual Video URL input */}
-          <div className="pt-1">
-            <input
-              type="url"
-              placeholder="Or paste video streaming URL (https://...)"
-              value={preview?.startsWith('blob:') ? '' : preview || ''}
-              onChange={(e) => {
-                setPreview(e.target.value);
-                onUploaded(e.target.value);
-              }}
-              className="w-full text-xs px-2.5 py-1.5 border border-neutral-200 rounded-xs focus:border-neutral-900 outline-none text-neutral-800 bg-white"
-            />
-          </div>
+          {helperText && (
+            <div className="text-[11px] text-neutral-400">
+              {helperText}
+            </div>
+          )}
 
           {error && (
             <div className="flex items-center gap-1 text-[11px] text-rose-600">

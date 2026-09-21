@@ -82,6 +82,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     deleteFaqItem,
     markEnquiryRead,
     deleteEnquiry,
+    reloadData,
     resetToDefaults,
   } = useCMS();
 
@@ -133,7 +134,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     images: [],
   });
   const [editingProject, setEditingProject] = useState<WeddingProject | null>(null);
-  const [tempProjectImageInput, setTempProjectImageInput] = useState('');
 
   // Success toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -215,8 +215,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-    } catch (e) {
-      console.warn('Sign out error:', e);
+    } catch {
+      // ignore
     }
     setIsAuthenticated(false);
     sessionStorage.removeItem('cammystery_admin_auth');
@@ -289,6 +289,36 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
   // State for Studio Info Modal
   const [studioModalOpen, setStudioModalOpen] = useState(false);
   const [studioForm, setStudioForm] = useState(studioInfo);
+
+  // Lock background scrolling whenever any modal is open
+  const isAnyModalOpen = Boolean(
+    newProjectModal ||
+    editingProject ||
+    newWorkModal ||
+    editingWork ||
+    editingSlide ||
+    videoModalOpen ||
+    newTeamModal ||
+    editingTeamMember ||
+    newPricingModal ||
+    editingPricingPkg ||
+    newTestimonialModal ||
+    editingTestimonial ||
+    newFaqModal ||
+    editingFaq ||
+    studioModalOpen ||
+    confirmModalState.isOpen
+  );
+
+  React.useEffect(() => {
+    if (isAnyModalOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isAnyModalOpen]);
 
   if (!isAuthenticated) {
     return (
@@ -391,7 +421,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
       />
 
       {/* Top Admin Bar */}
-      <div className="bg-neutral-900 text-white px-6 sm:px-10 py-3.5 border-b border-neutral-800 flex flex-wrap items-center justify-between gap-4">
+      <div className="sticky top-0 z-40 bg-neutral-900 text-white px-6 sm:px-10 py-3.5 border-b border-neutral-800 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <span className="text-[11px] tracking-[0.25em] uppercase font-semibold text-white">
             CAM-MYSTERY CMS
@@ -429,7 +459,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Sidebar Tabs */}
-          <div className="lg:col-span-3 bg-white border border-neutral-200 p-2 shadow-xs rounded-xs">
+          <div className="lg:col-span-3 bg-white border border-neutral-200 p-2 shadow-xs rounded-xs lg:sticky lg:top-20 self-start z-30 max-h-[calc(100vh-6rem)] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <nav className="space-y-1">
               {[
                 { id: 'overview', label: 'Dashboard Overview', icon: Layers },
@@ -1026,9 +1056,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                 </div>
 
                 {/* 2. How We Work 3-Column Visuals */}
-                <div className="bg-white border border-neutral-200 p-6 shadow-xs rounded-xs space-y-6">
+                <div className="bg-white border border-neutral-200 p-6 sm:p-8 shadow-xs rounded-xs space-y-6">
                   <div className="border-b border-neutral-100 pb-3">
-                    <h3 className="font-serif text-base text-neutral-900 font-medium">
+                    <h3 className="font-serif text-lg text-neutral-900 font-medium">
                       2. "How We Work" Philosophy Visuals
                     </h3>
                     <p className="text-xs text-neutral-500">
@@ -1036,74 +1066,98 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
                     {/* Card 1: Intimate */}
-                    <div className="border border-neutral-200 p-4 rounded-xs space-y-3">
-                      <span className="text-[10px] tracking-wider uppercase font-semibold text-neutral-400">
-                        PILLAR 1: INTIMATE
-                      </span>
-                      <div className="aspect-[4/5] bg-neutral-100 rounded-xs overflow-hidden">
+                    <div className="bg-neutral-50/70 border border-neutral-200 rounded-sm p-4 flex flex-col space-y-4 shadow-2xs hover:border-neutral-300 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] tracking-[0.2em] uppercase font-semibold text-neutral-500">
+                          Pillar 1: Intimate
+                        </span>
+                        <span className="text-[9px] uppercase px-1.5 py-0.5 bg-neutral-200 text-neutral-700 rounded-xs">
+                          4:5 Ratio
+                        </span>
+                      </div>
+                      <div className="aspect-[4/5] bg-neutral-200 rounded-xs overflow-hidden border border-neutral-200 shadow-inner">
                         <img
                           src={aboutImages.howWeWork1}
                           alt="Pillar 1: Intimate"
                           className="w-full h-full object-cover object-top"
                         />
                       </div>
-                      <CloudinaryImageUpload
-                        label="Upload Photo"
-                        folder="images"
-                        currentUrl={aboutImages.howWeWork1}
-                        onUploaded={async (url) => {
-                          await updateAboutImages({ ...aboutImages, howWeWork1: url });
-                          showToast('Updated Intimate pillar photo.');
-                        }}
-                      />
+                      <div className="pt-1">
+                        <CloudinaryImageUpload
+                          hidePreview={true}
+                          buttonText="Replace Photo"
+                          folder="images"
+                          currentUrl={aboutImages.howWeWork1}
+                          onUploaded={async (url) => {
+                            await updateAboutImages({ ...aboutImages, howWeWork1: url });
+                            showToast('Updated Intimate pillar photo.');
+                          }}
+                        />
+                      </div>
                     </div>
 
                     {/* Card 2: Intentional */}
-                    <div className="border border-neutral-200 p-4 rounded-xs space-y-3">
-                      <span className="text-[10px] tracking-wider uppercase font-semibold text-neutral-400">
-                        PILLAR 2: INTENTIONAL
-                      </span>
-                      <div className="aspect-[4/5] bg-neutral-100 rounded-xs overflow-hidden">
+                    <div className="bg-neutral-50/70 border border-neutral-200 rounded-sm p-4 flex flex-col space-y-4 shadow-2xs hover:border-neutral-300 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] tracking-[0.2em] uppercase font-semibold text-neutral-500">
+                          Pillar 2: Intentional
+                        </span>
+                        <span className="text-[9px] uppercase px-1.5 py-0.5 bg-neutral-200 text-neutral-700 rounded-xs">
+                          4:5 Ratio
+                        </span>
+                      </div>
+                      <div className="aspect-[4/5] bg-neutral-200 rounded-xs overflow-hidden border border-neutral-200 shadow-inner">
                         <img
                           src={aboutImages.howWeWork2}
                           alt="Pillar 2: Intentional"
                           className="w-full h-full object-cover object-top"
                         />
                       </div>
-                      <CloudinaryImageUpload
-                        label="Upload Photo"
-                        folder="images"
-                        currentUrl={aboutImages.howWeWork2}
-                        onUploaded={async (url) => {
-                          await updateAboutImages({ ...aboutImages, howWeWork2: url });
-                          showToast('Updated Intentional pillar photo.');
-                        }}
-                      />
+                      <div className="pt-1">
+                        <CloudinaryImageUpload
+                          hidePreview={true}
+                          buttonText="Replace Photo"
+                          folder="images"
+                          currentUrl={aboutImages.howWeWork2}
+                          onUploaded={async (url) => {
+                            await updateAboutImages({ ...aboutImages, howWeWork2: url });
+                            showToast('Updated Intentional pillar photo.');
+                          }}
+                        />
+                      </div>
                     </div>
 
                     {/* Card 3: Eternal */}
-                    <div className="border border-neutral-200 p-4 rounded-xs space-y-3">
-                      <span className="text-[10px] tracking-wider uppercase font-semibold text-neutral-400">
-                        PILLAR 3: ETERNAL
-                      </span>
-                      <div className="aspect-[4/5] bg-neutral-100 rounded-xs overflow-hidden">
+                    <div className="bg-neutral-50/70 border border-neutral-200 rounded-sm p-4 flex flex-col space-y-4 shadow-2xs hover:border-neutral-300 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] tracking-[0.2em] uppercase font-semibold text-neutral-500">
+                          Pillar 3: Eternal
+                        </span>
+                        <span className="text-[9px] uppercase px-1.5 py-0.5 bg-neutral-200 text-neutral-700 rounded-xs">
+                          4:5 Ratio
+                        </span>
+                      </div>
+                      <div className="aspect-[4/5] bg-neutral-200 rounded-xs overflow-hidden border border-neutral-200 shadow-inner">
                         <img
                           src={aboutImages.howWeWork3}
                           alt="Pillar 3: Eternal"
                           className="w-full h-full object-cover object-top"
                         />
                       </div>
-                      <CloudinaryImageUpload
-                        label="Upload Photo"
-                        folder="images"
-                        currentUrl={aboutImages.howWeWork3}
-                        onUploaded={async (url) => {
-                          await updateAboutImages({ ...aboutImages, howWeWork3: url });
-                          showToast('Updated Eternal pillar photo.');
-                        }}
-                      />
+                      <div className="pt-1">
+                        <CloudinaryImageUpload
+                          hidePreview={true}
+                          buttonText="Replace Photo"
+                          folder="images"
+                          currentUrl={aboutImages.howWeWork3}
+                          onUploaded={async (url) => {
+                            await updateAboutImages({ ...aboutImages, howWeWork3: url });
+                            showToast('Updated Eternal pillar photo.');
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1508,9 +1562,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                       Wedding booking inquiries submitted via the Contact page.
                     </p>
                   </div>
-                  <span className="text-xs font-semibold px-2.5 py-1 bg-neutral-100 rounded-xs text-neutral-800">
-                    Total: {enquiries.length}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={async () => {
+                        await reloadData();
+                        showToast('Inbox synced with Supabase.');
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-neutral-200 hover:border-neutral-900 text-neutral-700 hover:text-black rounded-xs text-xs tracking-wider uppercase transition-colors cursor-pointer"
+                      title="Sync latest enquiries from Supabase"
+                    >
+                      <RotateCcw size={12} />
+                      <span>Sync</span>
+                    </button>
+                    <span className="text-xs font-semibold px-2.5 py-1 bg-neutral-100 rounded-xs text-neutral-800">
+                      Total: {enquiries.length}
+                    </span>
+                  </div>
                 </div>
 
                 {enquiries.length === 0 ? (
@@ -1758,32 +1825,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                   }}
                 />
 
-                {/* Direct URL paste fallback */}
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    placeholder="Or paste an image URL directly"
-                    value={tempProjectImageInput}
-                    onChange={(e) => setTempProjectImageInput(e.target.value)}
-                    className="flex-1 text-xs px-3 py-1.5 border border-neutral-200 rounded-xs outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (tempProjectImageInput.trim()) {
-                        setNewProjectForm((prev) => ({
-                          ...prev,
-                          images: [...prev.images, tempProjectImageInput.trim()],
-                        }));
-                        setTempProjectImageInput('');
-                      }
-                    }}
-                    className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs rounded-xs cursor-pointer"
-                  >
-                    Add URL
-                  </button>
-                </div>
-
                 {/* Thumbnail strip of added images */}
                 {newProjectForm.images.length > 0 && (
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 pt-2">
@@ -1974,33 +2015,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                     }
                   }}
                 />
-
-                {/* Direct URL paste fallback */}
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    placeholder="Or paste an image URL directly"
-                    value={tempProjectImageInput}
-                    onChange={(e) => setTempProjectImageInput(e.target.value)}
-                    className="flex-1 text-xs px-3 py-1.5 border border-neutral-200 rounded-xs outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (tempProjectImageInput.trim()) {
-                        setEditingProject((prev) =>
-                          prev
-                            ? { ...prev, images: [...(prev.images || []), tempProjectImageInput.trim()] }
-                            : prev
-                        );
-                        setTempProjectImageInput('');
-                      }
-                    }}
-                    className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs rounded-xs cursor-pointer"
-                  >
-                    Add URL
-                  </button>
-                </div>
 
                 {/* Thumbnail strip of existing photos */}
                 {editingProject.images && editingProject.images.length > 0 && (

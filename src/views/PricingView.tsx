@@ -85,10 +85,10 @@ export const PricingView: React.FC<PricingViewProps> = ({ onNavigate }) => {
                     <button
                       id={`book-package-${pkg.id}`}
                       onClick={() => onNavigate('CONTACT', pkg.name)}
-                      className="inline-flex items-center text-xs tracking-[0.22em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
+                      className="inline-flex items-center text-[10px] sm:text-xs tracking-[0.12em] sm:tracking-[0.22em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer whitespace-nowrap"
                     >
                       <span>BOOK {pkg.name}</span>
-                      <span className="ml-2 font-sans text-sm">→</span>
+                      <span className="ml-1.5 sm:ml-2 font-sans text-xs sm:text-sm">→</span>
                     </button>
                   </div>
                 </div>
@@ -107,10 +107,10 @@ export const PricingView: React.FC<PricingViewProps> = ({ onNavigate }) => {
             <button
               id="pricing-custom-quote-btn"
               onClick={() => onNavigate('CONTACT', 'Custom Package')}
-              className="inline-flex items-center text-xs tracking-[0.25em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
+              className="inline-flex items-center text-[10px] sm:text-xs tracking-[0.14em] sm:tracking-[0.25em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer whitespace-nowrap"
             >
               <span>GET A CUSTOM QUOTE</span>
-              <span className="ml-2 font-sans text-sm">→</span>
+              <span className="ml-1.5 sm:ml-2 font-sans text-xs sm:text-sm">→</span>
             </button>
           </div>
         </ScrollReveal>

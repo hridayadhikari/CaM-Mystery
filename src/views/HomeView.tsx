@@ -79,10 +79,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <button
               id="home-our-story-link"
               onClick={() => onNavigate('ABOUT')}
-              className="inline-flex items-center text-xs tracking-[0.25em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
+              className="inline-flex items-center text-[10px] sm:text-xs tracking-[0.18em] sm:tracking-[0.25em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
             >
               <span>OUR STORY</span>
-              <span className="ml-2 font-sans text-sm">→</span>
+              <span className="ml-1.5 sm:ml-2 font-sans text-xs sm:text-sm">→</span>
             </button>
           </div>
         </ScrollReveal>
@@ -137,10 +137,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <button
             id="home-view-portfolio-link"
             onClick={() => onNavigate('PORTFOLIO', undefined, 'photos')}
-            className="inline-flex items-center text-xs tracking-[0.25em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
+            className="inline-flex items-center text-[10px] sm:text-xs tracking-[0.16em] sm:tracking-[0.25em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
           >
             <span>VIEW ALL PORTFOLIO PHOTOS</span>
-            <span className="ml-2 font-sans text-sm">→</span>
+            <span className="ml-1.5 sm:ml-2 font-sans text-xs sm:text-sm">→</span>
           </button>
         </ScrollReveal>
       </section>
@@ -164,7 +164,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <ScrollReveal distance={14} delay={0.1}>
               <button
                 onClick={() => onNavigate('PORTFOLIO', undefined, 'projects')}
-                className="inline-flex items-center gap-2 px-5 py-3 border border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800 text-xs tracking-[0.2em] uppercase font-medium transition-colors cursor-pointer rounded-xs"
+                className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 border border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800 text-[11px] sm:text-xs tracking-[0.15em] sm:tracking-[0.2em] uppercase font-medium transition-colors cursor-pointer rounded-xs w-full sm:w-auto"
               >
                 <span>EXPLORE ALL PROJECTS</span>
                 <ChevronRight size={14} />
@@ -258,13 +258,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </div>
 
           {/* Bottom CTA to Projects */}
-          <ScrollReveal distance={12} delay={0.15} className="text-center mt-12">
+          <ScrollReveal distance={12} delay={0.15} className="text-center mt-12 px-2">
             <button
               onClick={() => onNavigate('PORTFOLIO', undefined, 'projects')}
-              className="inline-flex items-center text-xs tracking-[0.22em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
+              className="inline-flex items-center text-[10px] sm:text-xs tracking-[0.12em] sm:tracking-[0.22em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer text-center"
             >
               <span>SEE ALL WEDDING STORIES IN PORTFOLIO</span>
-              <span className="ml-2 font-sans text-sm">→</span>
+              <span className="ml-1.5 sm:ml-2 font-sans text-xs sm:text-sm">→</span>
             </button>
           </ScrollReveal>
         </section>
@@ -294,10 +294,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <button
                 id="home-watch-films-btn"
                 onClick={onOpenVideo}
-                className="inline-flex items-center text-xs tracking-[0.25em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
+                className="inline-flex items-center text-[10px] sm:text-xs tracking-[0.16em] sm:tracking-[0.25em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
               >
                 <span>WATCH PRE-WEDDING FILM</span>
-                <span className="ml-2 font-sans text-sm">→</span>
+                <span className="ml-1.5 sm:ml-2 font-sans text-xs sm:text-sm">→</span>
               </button>
             </div>
           </ScrollReveal>
@@ -387,14 +387,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl text-white font-normal tracking-wide">
             Let's Make Something Together
           </h2>
-          <div className="pt-4">
+          <div className="pt-2 sm:pt-4">
             <button
               id="cta-get-in-touch-btn"
               onClick={() => onNavigate('CONTACT')}
-              className="inline-flex items-center px-8 py-3.5 border border-white/70 text-white hover:bg-white hover:text-neutral-900 transition-all text-xs tracking-[0.22em] uppercase font-medium cursor-pointer"
+              className="inline-flex items-center px-6 sm:px-8 py-3 sm:py-3.5 border border-white/70 text-white hover:bg-white hover:text-neutral-900 transition-all text-[11px] sm:text-xs tracking-[0.16em] sm:tracking-[0.22em] uppercase font-medium cursor-pointer"
             >
               <span>GET IN TOUCH</span>
-              <span className="ml-2 font-sans text-sm">→</span>
+              <span className="ml-2 font-sans text-xs sm:text-sm">→</span>
             </button>
           </div>
         </ScrollReveal>
