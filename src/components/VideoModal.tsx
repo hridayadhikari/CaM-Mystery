@@ -6,13 +6,15 @@ interface VideoModalProps {
   onClose: () => void;
   videoUrl?: string;
   videoTitle?: string;
+  posterUrl?: string;
 }
 
 export const VideoModal: React.FC<VideoModalProps> = ({
   isOpen,
   onClose,
-  videoUrl = 'https://res.cloudinary.com/naqb7hm2/video/upload/v1789134902/PRE_WEDDING_COMING_SOON_4K_ANKIT_ASHMITA_BALA_G_STUDIO_RISHIKESH_-_Bala-G_Studio_720p_h264_cnqgoj.mp4',
-  videoTitle = 'Ankit & Ashmita • Pre-Wedding Film',
+  videoUrl = '',
+  videoTitle = '',
+  posterUrl,
 }) => {
   if (!isOpen) return null;
 
@@ -42,7 +44,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({
             autoPlay
             controls
             playsInline
-            poster="https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1200&q=80"
+            poster={posterUrl}
           >
             <source
               src={videoUrl}
@@ -53,17 +55,19 @@ export const VideoModal: React.FC<VideoModalProps> = ({
         </div>
 
         {/* Minimal Bottom Bar - clean and unobtrusive */}
-        <div className="px-4 py-2.5 sm:px-6 sm:py-3 bg-neutral-950 text-neutral-300 flex items-center justify-between text-xs tracking-wider border-t border-neutral-900">
-          <div className="flex items-center space-x-2">
-            <Film size={13} className="text-neutral-400 shrink-0" />
-            <span className="font-serif text-sm text-neutral-200 font-normal tracking-wide">
-              {videoTitle}
+        {videoTitle && (
+          <div className="px-4 py-2.5 sm:px-6 sm:py-3 bg-neutral-950 text-neutral-300 flex items-center justify-between text-xs tracking-wider border-t border-neutral-900">
+            <div className="flex items-center space-x-2">
+              <Film size={13} className="text-neutral-400 shrink-0" />
+              <span className="font-serif text-sm text-neutral-200 font-normal tracking-wide">
+                {videoTitle}
+              </span>
+            </div>
+            <span className="text-[10px] tracking-[0.2em] uppercase text-neutral-500 hidden sm:inline">
+              CaM-Mystery Cinema
             </span>
           </div>
-          <span className="text-[10px] tracking-[0.2em] uppercase text-neutral-500 hidden sm:inline">
-            CaM-Mystery Cinema
-          </span>
-        </div>
+        )}
       </div>
     </div>
   );

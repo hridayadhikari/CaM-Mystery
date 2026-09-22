@@ -189,7 +189,8 @@ function MainApp() {
         isOpen={isVideoModalOpen}
         onClose={() => setIsVideoModalOpen(false)}
         videoUrl={videoFeature.videoUrl}
-        videoTitle={`${videoFeature.title} • ${videoFeature.subtitle}`}
+        videoTitle={[videoFeature.title, videoFeature.subtitle].filter(Boolean).join(' • ')}
+        posterUrl={videoFeature.posterUrl}
       />
     </div>
   );

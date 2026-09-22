@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, CheckCircle, AlertCircle, Loader2, Film, Play, X, ExternalLink } from 'lucide-react';
-import { uploadToCloudinary } from '../../lib/cloudinary';
+import { uploadToCloudinary, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '../../lib/cloudinary';
 
 interface CloudinaryVideoUploadProps {
   label: string;
@@ -16,12 +16,14 @@ export const CloudinaryVideoUpload: React.FC<CloudinaryVideoUploadProps> = ({
   helperText,
 }) => {
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | undefined>(currentUrl);
   const [isPlaying, setIsPlaying] = useState(false);
   const [modalPreviewOpen, setModalPreviewOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
 
   React.useEffect(() => {
@@ -36,8 +38,11 @@ export const CloudinaryVideoUpload: React.FC<CloudinaryVideoUploadProps> = ({
 
   // Sync state when currentUrl prop updates
   React.useEffect(() => {
-    setPreview(currentUrl);
-  }, [currentUrl]);
+    if (!uploading) {
+      setPreview(currentUrl);
+      setUploadedUrl(null);
+    }
+  }, [currentUrl, uploading]);
 
   const toggleInlinePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -52,21 +57,29 @@ export const CloudinaryVideoUpload: React.FC<CloudinaryVideoUploadProps> = ({
 
   const triggerUpload = async (file: File) => {
     setError(null);
+    setProgress(0);
     setUploading(true);
 
     const localBlob = URL.createObjectURL(file);
     setPreview(localBlob);
 
     try {
-      const res = await uploadToCloudinary(file, 'videos', 'video');
-      setPreview(res.secure_url);
-      onUploaded(res.secure_url);
+      const res = await uploadToCloudinary(file, 'videos', 'video', (pct) => setProgress(pct));
+      
+      const freshUrl = res.secure_url.includes('?')
+        ? `${res.secure_url}&t=${Date.now()}`
+        : `${res.secure_url}?t=${Date.now()}`;
+
+      setPreview(freshUrl);
+      setUploadedUrl(freshUrl);
+      onUploaded(freshUrl);
     } catch (err: any) {
       console.error(err);
       setError(err?.message || 'Failed to upload video to Cloudinary.');
-      setPreview(currentUrl);
+      if (!preview) setPreview(currentUrl);
     } finally {
       setUploading(false);
+      setProgress(0);
       setPendingFile(null);
     }
   };
@@ -74,6 +87,15 @@ export const CloudinaryVideoUpload: React.FC<CloudinaryVideoUploadProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      setError(`Video file size (${sizeMb} MB) exceeds the 10MB limit. Rejected before upload.`);
+      setPendingFile(null);
+      e.target.value = '';
+      return;
+    }
+
     setPendingFile(file);
     setConfirmOpen(true);
     e.target.value = '';
@@ -134,11 +156,17 @@ export const CloudinaryVideoUpload: React.FC<CloudinaryVideoUploadProps> = ({
           )}
 
           {uploading && (
-            <div className="absolute inset-0 bg-black/75 backdrop-blur-xs flex flex-col items-center justify-center text-white z-10">
-              <Loader2 size={22} className="animate-spin text-white" />
-              <span className="text-[10px] uppercase tracking-wider mt-1.5 font-medium">
-                Uploading Video
+            <div className="absolute inset-0 bg-black/85 backdrop-blur-xs flex flex-col items-center justify-center text-white z-10 px-3">
+              <Loader2 size={22} className="animate-spin text-white mb-1.5" />
+              <span className="text-[11px] uppercase tracking-wider font-semibold">
+                Uploading Video ({progress}%)
               </span>
+              <div className="w-full bg-white/20 h-1.5 rounded-full mt-2 overflow-hidden">
+                <div
+                  className="bg-white h-full transition-all duration-150 ease-out rounded-full"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
             </div>
           )}
         </div>
@@ -147,8 +175,17 @@ export const CloudinaryVideoUpload: React.FC<CloudinaryVideoUploadProps> = ({
         <div className="flex-1 space-y-2 w-full">
           <div className="flex items-center gap-2">
             <label className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white text-[11px] tracking-wider uppercase font-medium rounded-xs cursor-pointer transition-colors">
-              <Upload size={13} />
-              <span>{preview ? 'Change Video File' : 'Upload Video File'}</span>
+              {uploading ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Uploading {progress}%...</span>
+                </>
+              ) : (
+                <>
+                  <Upload size={13} />
+                  <span>{preview ? 'Change Video File' : 'Upload Video File'}</span>
+                </>
+              )}
               <input
                 type="file"
                 accept="video/*"
@@ -161,10 +198,46 @@ export const CloudinaryVideoUpload: React.FC<CloudinaryVideoUploadProps> = ({
             {preview && !uploading && (
               <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
                 <CheckCircle size={13} />
-                <span>Video Selected</span>
+                <span>{uploadedUrl ? 'Uploaded to Cloud' : 'Video Selected'}</span>
               </span>
             )}
           </div>
+
+          {/* Newly uploaded verified link & save reminder */}
+          {uploadedUrl && !uploading && (
+            <div className="flex flex-wrap items-center gap-2 text-[10px] bg-amber-50 text-amber-900 border border-amber-200 px-2.5 py-1.5 rounded-xs animate-in fade-in duration-200">
+              <span className="font-semibold uppercase tracking-wider text-amber-800">
+                Notice:
+              </span>
+              <span>Video stored in Cloudinary. Click "Save Video Settings" to apply changes permanently.</span>
+              <a
+                href={uploadedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-mono text-[9px] text-amber-950 underline hover:text-black ml-auto"
+                title="Open Cloudinary video URL in new tab to verify"
+              >
+                <span>Verify Link</span>
+                <ExternalLink size={10} />
+              </a>
+            </div>
+          )}
+
+          {/* Upload Progress Bar for Large Video Files */}
+          {uploading && (
+            <div className="space-y-1 pt-0.5">
+              <div className="flex justify-between text-[10px] text-neutral-600 font-medium tracking-wider uppercase">
+                <span>Uploading Video to Cloudinary</span>
+                <span>{progress}%</span>
+              </div>
+              <div className="w-full bg-neutral-100 h-1.5 rounded-full overflow-hidden border border-neutral-200">
+                <div
+                  className="bg-neutral-900 h-full transition-all duration-150 ease-out rounded-full"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          )}
 
           {helperText && (
             <div className="text-[11px] text-neutral-400">

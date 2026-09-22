@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { ArrowLeft, Calendar, MapPin, Images, Heart } from 'lucide-react';
 import { NavPage, SelectedWorkItem, WeddingProject } from '../types';
 import { ScrollReveal } from '../components/ScrollReveal';
+import { getOptimizedCloudinaryUrl, getCloudinarySrcSet } from '../lib/cloudinary';
 
 interface WeddingProjectDetailViewProps {
   project: WeddingProject;
@@ -43,9 +44,13 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
       {/* 2. Panoramic Hero Story Banner */}
       <section className="relative w-full aspect-[4/3] sm:aspect-[21/9] min-h-[340px] sm:min-h-[420px] max-h-[640px] bg-neutral-950 overflow-hidden shadow-sm">
         <img
-          src={project.coverImage}
+          src={getOptimizedCloudinaryUrl(project.coverImage, { width: 1600 })}
+          srcSet={getCloudinarySrcSet(project.coverImage, [800, 1200, 1600, 2000])}
+          sizes="100vw"
           alt={project.coupleNames}
           className="w-full h-full object-cover object-top filter brightness-[0.88] contrast-[1.05]"
+          loading="eager"
+          decoding="sync"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
 
@@ -135,10 +140,13 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
                 className="group relative aspect-[4/5] bg-neutral-100 overflow-hidden cursor-pointer shadow-xs rounded-xs"
               >
                 <img
-                  src={imgUrl}
+                  src={getOptimizedCloudinaryUrl(imgUrl, { width: 800 })}
+                  srcSet={getCloudinarySrcSet(imgUrl, [400, 800, 1200])}
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 380px"
                   alt={`${project.coupleNames} photograph ${idx + 1}`}
                   className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
                   loading="lazy"
+                  decoding="async"
                 />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3 sm:p-4 text-white">
                   <span className="text-[9px] sm:text-[10px] tracking-[0.2em] uppercase text-white/80">

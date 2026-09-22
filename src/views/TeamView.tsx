@@ -3,6 +3,7 @@ import { NavPage } from '../types';
 import { Camera, Film, Eye, Sparkles } from 'lucide-react';
 import { ScrollReveal } from '../components/ScrollReveal';
 import { useCMS } from '../lib/cmsStore';
+import { getOptimizedCloudinaryUrl, getCloudinarySrcSet } from '../lib/cloudinary';
 
 interface TeamViewProps {
   onNavigate: (page: NavPage) => void;
@@ -52,7 +53,11 @@ export const TeamView: React.FC<TeamViewProps> = ({ onNavigate }) => {
               >
                 <div className="aspect-[4/5] bg-neutral-100 overflow-hidden shadow-sm">
                   <img
-                    src={member.imageUrl}
+                    src={getOptimizedCloudinaryUrl(member.imageUrl, { width: 600 })}
+                    srcSet={getCloudinarySrcSet(member.imageUrl, [300, 600, 900])}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    loading="lazy"
+                    decoding="async"
                     alt={member.name}
                     className="w-full h-full object-cover object-top filter grayscale hover:grayscale-0 transition-all duration-700 hover:scale-105"
                   />

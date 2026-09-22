@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SelectedWorkItem } from '../types';
+import { getOptimizedCloudinaryUrl, getCloudinarySrcSet } from '../lib/cloudinary';
 
 interface LightboxModalProps {
   item: SelectedWorkItem | null;
@@ -70,7 +71,10 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <img
-          src={item.imageUrl}
+          src={getOptimizedCloudinaryUrl(item.imageUrl, { width: 1600 })}
+          srcSet={getCloudinarySrcSet(item.imageUrl, [800, 1200, 1600, 2000])}
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
+          decoding="async"
           alt={item.title}
           className="max-h-[75vh] w-auto max-w-full object-contain rounded-sm shadow-2xl"
         />

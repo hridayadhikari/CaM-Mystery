@@ -4,6 +4,7 @@ import { ABOUT_PARAGRAPHS } from '../data/content';
 import { Plus, Minus } from 'lucide-react';
 import { ScrollReveal } from '../components/ScrollReveal';
 import { useCMS } from '../lib/cmsStore';
+import { getOptimizedCloudinaryUrl, getCloudinarySrcSet } from '../lib/cloudinary';
 
 interface AboutViewProps {
   onNavigate: (page: NavPage) => void;
@@ -24,32 +25,40 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
 
   return (
     <div className="w-full">
-      {/* 1. The Studio Behind the Lens */}
-      <section className="py-20 sm:py-28 px-6 sm:px-12 max-w-7xl mx-auto">
+      {/* 1. Header & Story Section */}
+      <section className="pt-36 sm:pt-44 pb-20 sm:pb-28 px-6 sm:px-12 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 sm:gap-16 items-start">
           {/* Left: Text Content */}
-          <ScrollReveal distance={16} duration={0.65} className="lg:col-span-7 space-y-6">
-            <span className="text-[11px] tracking-[0.25em] uppercase text-neutral-400 font-medium">
-              THE STUDIO BEHIND THE LENS
-            </span>
-            <h1 className="font-serif text-3xl sm:text-5xl text-neutral-900 font-normal tracking-tight">
-              About CaM-Mystery
-            </h1>
+          <ScrollReveal distance={16} duration={0.65} className="lg:col-span-7 space-y-6 sm:space-y-8">
+            <div>
+              <span className="text-[11px] tracking-[0.25em] uppercase text-neutral-400 font-medium block mb-3">
+                ABOUT OUR STUDIO
+              </span>
+              <h1 className="font-serif text-3xl sm:text-5xl md:text-6xl text-neutral-900 font-normal tracking-tight leading-[1.12]">
+                We Believe Memories Deserve More Than Ordinary
+              </h1>
+            </div>
 
-            <div className="space-y-5 text-neutral-600 font-sans text-sm sm:text-[15px] leading-relaxed pt-2 text-justify">
-              {ABOUT_PARAGRAPHS.map((para, idx) => (
-                <p key={idx} className="text-justify">{para}</p>
+            <div className="space-y-5 text-neutral-600 font-sans text-xs sm:text-sm leading-relaxed text-justify">
+              {ABOUT_PARAGRAPHS.map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
               ))}
             </div>
 
-            <div className="pt-6">
+            <div className="pt-4 flex flex-col sm:flex-row gap-4">
               <button
-                id="about-say-hello-btn"
-                onClick={() => onNavigate('CONTACT')}
-                className="inline-flex items-center text-xs tracking-[0.25em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
+                id="about-view-portfolio-btn"
+                onClick={() => onNavigate('PORTFOLIO')}
+                className="inline-flex items-center justify-center px-6 py-3 border border-neutral-900 bg-neutral-900 text-white hover:bg-neutral-800 text-[11px] sm:text-xs tracking-[0.18em] uppercase font-medium transition-colors cursor-pointer rounded-xs"
               >
-                <span>SAY HELLO</span>
-                <span className="ml-2 font-sans text-sm">→</span>
+                <span>EXPLORE OUR PORTFOLIO</span>
+              </button>
+              <button
+                id="about-contact-btn"
+                onClick={() => onNavigate('CONTACT')}
+                className="inline-flex items-center justify-center px-6 py-3 border border-neutral-300 text-neutral-800 hover:border-neutral-900 text-[11px] sm:text-xs tracking-[0.18em] uppercase font-medium transition-colors cursor-pointer rounded-xs"
+              >
+                <span>GET IN TOUCH</span>
               </button>
             </div>
           </ScrollReveal>
@@ -58,9 +67,14 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
           <ScrollReveal distance={20} delay={0.15} duration={0.7} className="lg:col-span-5 sticky top-28">
             <div className="aspect-[3/4] sm:aspect-[4/5] lg:aspect-[3/4.2] bg-neutral-100 overflow-hidden shadow-sm">
               <img
-                src={aboutImages.storyPortrait}
+                key={aboutImages.storyPortrait}
+                src={getOptimizedCloudinaryUrl(aboutImages.storyPortrait, { width: 1000 })}
+                srcSet={getCloudinarySrcSet(aboutImages.storyPortrait, [400, 800, 1000, 1200])}
+                sizes="(max-width: 1024px) 100vw, 500px"
                 alt="Indian Bride in fine art bridal lehenga by window"
                 className="w-full h-full object-cover object-top filter brightness-[0.98] contrast-[1.02]"
+                loading="eager"
+                decoding="sync"
               />
             </div>
           </ScrollReveal>
@@ -81,7 +95,12 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
             <ScrollReveal distance={16} delay={0} duration={0.6} className="space-y-6">
               <div className="aspect-[4/5] bg-neutral-100 overflow-hidden">
                 <img
-                  src={aboutImages.howWeWork1}
+                  key={aboutImages.howWeWork1}
+                  src={getOptimizedCloudinaryUrl(aboutImages.howWeWork1, { width: 800 })}
+                  srcSet={getCloudinarySrcSet(aboutImages.howWeWork1, [400, 800, 1200])}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
+                  loading="lazy"
+                  decoding="async"
                   alt="Intimate bridal smile"
                   className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-700"
                 />
@@ -102,7 +121,12 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
             <ScrollReveal distance={16} delay={0.12} duration={0.6} className="space-y-6">
               <div className="aspect-[4/5] bg-neutral-100 overflow-hidden">
                 <img
-                  src={aboutImages.howWeWork2}
+                  key={aboutImages.howWeWork2}
+                  src={getOptimizedCloudinaryUrl(aboutImages.howWeWork2, { width: 800 })}
+                  srcSet={getCloudinarySrcSet(aboutImages.howWeWork2, [400, 800, 1200])}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
+                  loading="lazy"
+                  decoding="async"
                   alt="Intentional couple portrait"
                   className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-700"
                 />
@@ -123,7 +147,12 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
             <ScrollReveal distance={16} delay={0.24} duration={0.6} className="space-y-6">
               <div className="aspect-[4/5] bg-neutral-100 overflow-hidden">
                 <img
-                  src={aboutImages.howWeWork3}
+                  key={aboutImages.howWeWork3}
+                  src={getOptimizedCloudinaryUrl(aboutImages.howWeWork3, { width: 800 })}
+                  srcSet={getCloudinarySrcSet(aboutImages.howWeWork3, [400, 800, 1200])}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
+                  loading="lazy"
+                  decoding="async"
                   alt="Eternal details and heirloom traditions"
                   className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-700"
                 />
@@ -148,7 +177,12 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
         {/* Background Photography with dynamic zoom on expanding questions */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
           <img
-            src={aboutImages.faqBackground}
+            key={aboutImages.faqBackground}
+            src={getOptimizedCloudinaryUrl(aboutImages.faqBackground, { width: 1600 })}
+            srcSet={getCloudinarySrcSet(aboutImages.faqBackground, [800, 1200, 1600, 2000])}
+            sizes="100vw"
+            loading="lazy"
+            decoding="async"
             alt="Bride in atmospheric ceremonial lights"
             style={{
               transform: `scale(${zoomScale})`,

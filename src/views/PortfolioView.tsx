@@ -3,6 +3,7 @@ import { Play, Calendar, MapPin, Images, X, ChevronRight } from 'lucide-react';
 import { NavPage, SelectedWorkItem, WeddingProject } from '../types';
 import { ScrollReveal } from '../components/ScrollReveal';
 import { useCMS } from '../lib/cmsStore';
+import { getOptimizedCloudinaryUrl, getCloudinarySrcSet } from '../lib/cloudinary';
 
 interface PortfolioViewProps {
   onNavigate: (page: NavPage) => void;
@@ -18,9 +19,13 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
   initialTab = 'photos',
   onOpenProject,
 }) => {
-  const { selectedWork, videoFeature, weddingProjects } = useCMS();
+  const { selectedWork, videoFeature, weddingProjects, aboutImages } = useCMS();
   const [portfolioTab, setPortfolioTab] = useState<'photos' | 'projects'>(initialTab);
   const [activeCategory, setActiveCategory] = useState<string>('all');
+
+  const heroImage =
+    aboutImages?.portfolioHero ||
+    'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=2000&q=85';
 
   // Derive categories dynamically so all standalone photo categories are represented
   const dynamicCategories = Array.from(
@@ -52,10 +57,15 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
         <ScrollReveal distance={18} delay={0.1} duration={0.7}>
           <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] md:aspect-[2/1] max-h-[620px] bg-neutral-900 overflow-hidden shadow-sm">
             <img
-              src="https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=2000&q=85"
+              key={heroImage}
+              src={getOptimizedCloudinaryUrl(heroImage, { width: 1600 })}
+              srcSet={getCloudinarySrcSet(heroImage, [800, 1200, 1600, 2000])}
+              sizes="(max-width: 1280px) 100vw, 1280px"
               alt="Bride in red bridal couture with warm ceremonial candle lights"
               className="w-full h-full object-cover filter brightness-[0.9] contrast-[1.05]"
               style={{ objectPosition: 'center 22%' }}
+              loading="eager"
+              decoding="sync"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
           </div>
@@ -121,7 +131,7 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
               </ScrollReveal>
 
               {/* Special Highlight for Pre-Wedding Cinema */}
-              {(activeCategory === 'all' || activeCategory.toLowerCase() === 'pre wedding') && (
+              {Boolean(videoFeature?.videoUrl) && (activeCategory === 'all' || activeCategory.toLowerCase() === 'pre wedding') && (
                 <ScrollReveal distance={18} duration={0.65}>
                   <div className="bg-neutral-950 text-white rounded-sm overflow-hidden p-0 sm:p-8 lg:p-10 border border-neutral-800 shadow-xl">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 items-center">
@@ -198,10 +208,13 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                         className="group relative aspect-[4/5] bg-neutral-100 overflow-hidden cursor-pointer shadow-sm"
                       >
                         <img
-                          src={item.imageUrl}
+                          src={getOptimizedCloudinaryUrl(item.imageUrl, { width: 800 })}
+                          srcSet={getCloudinarySrcSet(item.imageUrl, [400, 800, 1200])}
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 320px"
                           alt={item.title}
                           className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
                           loading="lazy"
+                          decoding="async"
                         />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
                           <span className="text-[10px] tracking-[0.2em] uppercase text-white/80">
@@ -264,10 +277,13 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                     {/* Cover image */}
                     <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
                       <img
-                        src={project.coverImage}
+                        src={getOptimizedCloudinaryUrl(project.coverImage, { width: 800 })}
+                        srcSet={getCloudinarySrcSet(project.coverImage, [400, 800, 1200])}
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
                         alt={project.coupleNames}
                         className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
                         loading="lazy"
+                        decoding="async"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-80 group-hover:opacity-95 transition-opacity" />
 

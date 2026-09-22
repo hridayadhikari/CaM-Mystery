@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Camera,
   Image as ImageIcon,
@@ -43,6 +43,7 @@ import {
 import { CloudinaryImageUpload } from '../components/admin/CloudinaryImageUpload';
 import { CloudinaryVideoUpload } from '../components/admin/CloudinaryVideoUpload';
 import { ConfirmModal } from '../components/admin/ConfirmModal';
+import { getOptimizedCloudinaryUrl } from '../lib/cloudinary';
 
 interface AdminViewProps {
   onNavigate: (page: NavPage) => void;
@@ -99,6 +100,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     deleteFaqItem,
     markEnquiryRead,
     deleteEnquiry,
+    fetchBookingsFromDB,
     updateBookingStatus,
     deleteBooking,
     reloadData,
@@ -114,6 +116,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+
+  // Automatically fetch bookings directly from Supabase table whenever Bookings tab is opened
+  useEffect(() => {
+    if (activeTab === 'bookings') {
+      fetchBookingsFromDB();
+    }
+  }, [activeTab]);
 
   // Check Supabase session on mount
   React.useEffect(() => {
@@ -739,8 +748,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                       >
                         <div className="aspect-[4/5] bg-neutral-100 relative overflow-hidden">
                           <img
-                            src={item.imageUrl}
+                            src={getOptimizedCloudinaryUrl(item.imageUrl, { width: 400 })}
                             alt={item.title}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover object-top"
                           />
                           {item.isFeatured && (
@@ -840,8 +851,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                             <div>
                               <div className="aspect-[16/10] bg-neutral-900 relative overflow-hidden group">
                                 <img
-                                  src={project.coverImage}
+                                  src={getOptimizedCloudinaryUrl(project.coverImage, { width: 600 })}
                                   alt={project.coupleNames}
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-full h-full object-cover object-top"
                                 />
                                 <div className="absolute top-2 right-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded-xs flex items-center gap-1">
@@ -932,8 +945,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                         <div>
                           <div className="aspect-[16/10] bg-neutral-950 relative overflow-hidden flex items-center justify-center">
                             <img
-                              src={slide.imageUrl}
+                              src={getOptimizedCloudinaryUrl(slide.imageUrl, { width: 600 })}
                               alt={slide.title}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-contain"
                             />
                             <div className="absolute top-2 left-2 bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-wider text-white rounded-xs">
@@ -1073,8 +1088,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
                     <div className="sm:col-span-4 aspect-[3/4] bg-neutral-100 rounded-xs overflow-hidden border border-neutral-200">
                       <img
-                        src={aboutImages.storyPortrait}
+                        src={getOptimizedCloudinaryUrl(aboutImages.storyPortrait, { width: 500 })}
                         alt="Primary Story Portrait"
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover object-top"
                       />
                     </div>
@@ -1116,8 +1133,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                       </div>
                       <div className="aspect-[4/5] bg-neutral-200 rounded-xs overflow-hidden border border-neutral-200 shadow-inner">
                         <img
-                          src={aboutImages.howWeWork1}
+                          src={getOptimizedCloudinaryUrl(aboutImages.howWeWork1, { width: 400 })}
                           alt="Pillar 1: Intimate"
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover object-top"
                         />
                       </div>
@@ -1147,8 +1166,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                       </div>
                       <div className="aspect-[4/5] bg-neutral-200 rounded-xs overflow-hidden border border-neutral-200 shadow-inner">
                         <img
-                          src={aboutImages.howWeWork2}
+                          src={getOptimizedCloudinaryUrl(aboutImages.howWeWork2, { width: 400 })}
                           alt="Pillar 2: Intentional"
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover object-top"
                         />
                       </div>
@@ -1178,8 +1199,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                       </div>
                       <div className="aspect-[4/5] bg-neutral-200 rounded-xs overflow-hidden border border-neutral-200 shadow-inner">
                         <img
-                          src={aboutImages.howWeWork3}
+                          src={getOptimizedCloudinaryUrl(aboutImages.howWeWork3, { width: 400 })}
                           alt="Pillar 3: Eternal"
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover object-top"
                         />
                       </div>
@@ -1213,8 +1236,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
                     <div className="sm:col-span-5 aspect-[16/9] bg-neutral-950 rounded-xs overflow-hidden border border-neutral-200">
                       <img
-                        src={aboutImages.faqBackground}
+                        src={getOptimizedCloudinaryUrl(aboutImages.faqBackground, { width: 600 })}
                         alt="FAQ Background Photograph"
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover object-top"
                       />
                     </div>
@@ -1226,6 +1251,84 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                         onUploaded={async (url) => {
                           await updateAboutImages({ ...aboutImages, faqBackground: url });
                           showToast('Updated FAQ background photo.');
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Homepage "Reserve Your Date" CTA Banner Background */}
+                <div className="bg-white border border-neutral-200 p-6 shadow-xs rounded-xs space-y-4">
+                  <div className="border-b border-neutral-100 pb-3">
+                    <h3 className="font-serif text-base text-neutral-900 font-medium">
+                      4. Homepage "Reserve Your Date Before It's Gone" CTA Banner
+                    </h3>
+                    <p className="text-xs text-neutral-500">
+                      The full-bleed background photograph framed behind the "Let's Make Something Together" reservation CTA on the homepage.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+                    <div className="sm:col-span-5 aspect-[16/9] bg-neutral-950 rounded-xs overflow-hidden border border-neutral-200">
+                      <img
+                        src={getOptimizedCloudinaryUrl(
+                          aboutImages.ctaBackground ||
+                            'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=2000&q=85',
+                          { width: 600 }
+                        )}
+                        alt="Homepage CTA Banner Background"
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover object-center"
+                      />
+                    </div>
+                    <div className="sm:col-span-7 space-y-4">
+                      <CloudinaryImageUpload
+                        label="Change Homepage CTA Background (Cloudinary Direct Upload)"
+                        folder="images"
+                        currentUrl={aboutImages.ctaBackground}
+                        onUploaded={async (url) => {
+                          await updateAboutImages({ ...aboutImages, ctaBackground: url });
+                          showToast('Updated Homepage CTA background image.');
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Portfolio Showcase Hero Banner ("Stories We've Had the Honour to Tell") */}
+                <div className="bg-white border border-neutral-200 p-6 shadow-xs rounded-xs space-y-4">
+                  <div className="border-b border-neutral-100 pb-3">
+                    <h3 className="font-serif text-base text-neutral-900 font-medium">
+                      5. Portfolio Hero Showcase Banner ("Stories We've Had the Honour to Tell")
+                    </h3>
+                    <p className="text-xs text-neutral-500">
+                      The panoramic hero banner featured at the top of the Our Work &amp; Portfolio page.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
+                    <div className="sm:col-span-5 aspect-[16/9] bg-neutral-950 rounded-xs overflow-hidden border border-neutral-200">
+                      <img
+                        src={getOptimizedCloudinaryUrl(
+                          aboutImages.portfolioHero ||
+                            'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=2000&q=85',
+                          { width: 600 }
+                        )}
+                        alt="Portfolio Hero Showcase Banner"
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover object-center"
+                      />
+                    </div>
+                    <div className="sm:col-span-7 space-y-4">
+                      <CloudinaryImageUpload
+                        label="Change Portfolio Hero Banner (Cloudinary Direct Upload)"
+                        folder="images"
+                        currentUrl={aboutImages.portfolioHero}
+                        onUploaded={async (url) => {
+                          await updateAboutImages({ ...aboutImages, portfolioHero: url });
+                          showToast('Updated Portfolio hero banner image.');
                         }}
                       />
                     </div>
@@ -1355,8 +1458,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                       <div>
                         <div className="aspect-[4/5] bg-neutral-900 overflow-hidden flex items-center justify-center">
                           <img
-                            src={member.imageUrl}
+                            src={getOptimizedCloudinaryUrl(member.imageUrl, { width: 400 })}
                             alt={member.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-contain grayscale"
                           />
                         </div>
@@ -1737,17 +1842,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                       onClick={async () => {
                         try {
                           setIsSyncingSheet(true);
-                          await syncAllBookingsToGoogleSheet(bookings);
-                          showToast('All bookings synced to Google Sheet!');
+                          // 1. Directly fetch latest bookings from Supabase database table
+                          const freshBookings = await fetchBookingsFromDB();
+                          // 2. Sync all fresh database records to Google Sheet
+                          await syncAllBookingsToGoogleSheet(freshBookings);
+                          showToast(`Synced ${freshBookings.length} bookings from Supabase to Google Sheet!`);
                         } catch (err: any) {
                           alert(err.message || 'Failed to sync to Google Sheet.');
                         } finally {
                           setIsSyncingSheet(false);
                         }
                       }}
-                      disabled={isSyncingSheet || bookings.length === 0}
+                      disabled={isSyncingSheet}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xs text-xs tracking-wider uppercase transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Push all bookings into your Google Sheet"
+                      title="Directly fetch from Supabase and push to Google Sheet"
                     >
                       <FileSpreadsheet size={13} />
                       <span>{isSyncingSheet ? 'Syncing...' : 'Sync to Google Sheet'}</span>
@@ -1764,11 +1872,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                     </a>
                     <button
                       onClick={async () => {
-                        await reloadData();
-                        showToast('Bookings synced with Supabase.');
+                        const fresh = await fetchBookingsFromDB();
+                        showToast(`Loaded ${fresh.length} bookings directly from Supabase.`);
                       }}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-neutral-200 hover:border-neutral-900 text-neutral-700 hover:text-black rounded-xs text-xs tracking-wider uppercase transition-colors cursor-pointer"
-                      title="Sync latest bookings from Supabase"
+                      title="Fetch latest bookings directly from Supabase database table"
                     >
                       <RotateCcw size={12} />
                       <span>Refresh</span>
@@ -2249,7 +2357,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 pt-2">
                     {newProjectForm.images.map((imgUrl, idx) => (
                       <div key={idx} className="relative aspect-square bg-neutral-100 rounded-xs overflow-hidden group">
-                        <img src={imgUrl} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover object-top" />
+                        <img
+                          src={getOptimizedCloudinaryUrl(imgUrl, { width: 200 })}
+                          alt={`Photo ${idx + 1}`}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover object-top"
+                        />
                         <button
                           type="button"
                           onClick={() => {
@@ -2440,7 +2554,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 pt-2">
                     {editingProject.images.map((imgUrl, idx) => (
                       <div key={idx} className="relative aspect-square bg-neutral-100 rounded-xs overflow-hidden group">
-                        <img src={imgUrl} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover object-top" />
+                        <img
+                          src={getOptimizedCloudinaryUrl(imgUrl, { width: 200 })}
+                          alt={`Photo ${idx + 1}`}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover object-top"
+                        />
                         <button
                           type="button"
                           onClick={() => {

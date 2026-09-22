@@ -76,6 +76,7 @@ interface CMSContextType {
   deleteEnquiry: (id: string) => Promise<void>;
 
   // Bookings
+  fetchBookingsFromDB: () => Promise<BookingItem[]>;
   addBooking: (bookingData: BookingFormData) => Promise<BookingItem>;
   updateBooking: (id: string, updates: Partial<BookingItem>) => Promise<void>;
   updateBookingStatus: (id: string, status: BookingStatus) => Promise<void>;
@@ -230,6 +231,8 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       howWeWork2: 'https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&w=800&q=80',
       howWeWork3: 'https://images.unsplash.com/photo-1583939411023-14783179e581?auto=format&fit=crop&w=800&q=80',
       faqBackground: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=2000&q=85',
+      ctaBackground: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=2000&q=85',
+      portfolioHero: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=2000&q=85',
     })
   );
   const [weddingProjects, setWeddingProjects] = useState<WeddingProject[]>(() =>
@@ -710,7 +713,31 @@ const toDbBooking = (item: Partial<BookingItem>) => {
     await safeSupabaseWrite('enquiries', 'delete', undefined, 'id', id);
   };
 
-  // Bookings CRUD
+  // Bookings CRUD - Direct Supabase table operations
+  const fetchBookingsFromDB = async (): Promise<BookingItem[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('[CMS] Supabase direct bookings fetch warning:', error.message);
+        return bookings;
+      }
+
+      if (data && Array.isArray(data)) {
+        const normalized = data.map(normalizeBooking);
+        setBookings(normalized);
+        setLocal('bookings', normalized);
+        return normalized;
+      }
+    } catch (err) {
+      console.warn('[CMS] fetchBookingsFromDB error:', err);
+    }
+    return bookings;
+  };
+
   const addBooking = async (bookingData: BookingFormData): Promise<BookingItem> => {
     // Generate UUID v4 for Supabase id
     const newId = typeof crypto !== 'undefined' && crypto.randomUUID
@@ -721,58 +748,119 @@ const toDbBooking = (item: Partial<BookingItem>) => {
           return v.toString(16);
         });
 
-    const newBooking: BookingItem = {
+    let newBooking: BookingItem = {
       ...bookingData,
       id: newId,
       status: 'pending',
       createdAt: new Date().toISOString(),
     };
 
-    const updated = [newBooking, ...bookings];
-    setBookings(updated);
-    setLocal('bookings', updated);
+    // 1. Directly insert into Supabase bookings table
+    try {
+      const dbPayload = toDbBooking(newBooking);
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert(dbPayload)
+        .select('*')
+        .single();
 
-    const writeRes = await safeSupabaseWrite('bookings', 'insert', toDbBooking(newBooking));
-    if (writeRes?.error) {
-      console.error('[CMS] Failed to save booking to Supabase database:', writeRes.error);
-      throw new Error(writeRes.error.message || 'Database error: Could not save booking.');
+      if (error) {
+        console.warn('[CMS] Supabase direct insert warning:', error.message);
+        await safeSupabaseWrite('bookings', 'insert', dbPayload);
+      } else if (data) {
+        newBooking = normalizeBooking(data);
+      }
+    } catch (dbErr) {
+      console.warn('[CMS] Supabase booking insert error:', dbErr);
     }
 
-    // Fire and forget send to Google Sheets Webhook if configured
-    sendBookingToGoogleSheet(newBooking).catch((err) => {
-      console.warn('[CMS] Google Sheets webhook dispatch warning:', err);
+    // Update local state & cache
+    setBookings((prev) => {
+      const filtered = prev.filter((b) => b.id !== newBooking.id);
+      const updated = [newBooking, ...filtered];
+      setLocal('bookings', updated);
+      return updated;
     });
+
+    // 2. Directly send this database booking to Google Sheets
+    try {
+      await sendBookingToGoogleSheet(newBooking);
+    } catch (sheetErr) {
+      console.warn('[CMS] Google Sheets dispatch error:', sheetErr);
+    }
 
     return newBooking;
   };
 
   const updateBooking = async (id: string, updates: Partial<BookingItem>) => {
+    // 1. Direct update to Supabase bookings table
+    try {
+      await supabase
+        .from('bookings')
+        .update(toDbBooking(updates))
+        .eq('id', id);
+    } catch (dbErr) {
+      console.warn('[CMS] Supabase update booking error:', dbErr);
+      await safeSupabaseWrite('bookings', 'update', toDbBooking(updates), 'id', id);
+    }
+
     const updated = bookings.map((b) => (b.id === id ? { ...b, ...updates } : b));
     setBookings(updated);
     setLocal('bookings', updated);
-    await safeSupabaseWrite('bookings', 'update', toDbBooking(updates), 'id', id);
   };
 
   const updateBookingStatus = async (id: string, status: BookingStatus) => {
-    const updated = bookings.map((b) => (b.id === id ? { ...b, status } : b));
-    setBookings(updated);
-    setLocal('bookings', updated);
-    await safeSupabaseWrite('bookings', 'update', { status }, 'id', id);
+    // 1. Direct update to Supabase bookings table
+    try {
+      await supabase
+        .from('bookings')
+        .update({ status })
+        .eq('id', id);
+    } catch (dbErr) {
+      console.warn('[CMS] Supabase update status error:', dbErr);
+      await safeSupabaseWrite('bookings', 'update', { status }, 'id', id);
+    }
 
-    // Sync updated status to Google Sheet
-    const targetBooking = updated.find((b) => b.id === id);
-    if (targetBooking) {
-      sendBookingToGoogleSheet(targetBooking).catch((err) => {
-        console.warn('[CMS] Google Sheets status sync warning:', err);
+    // 2. Update state and cache
+    let updatedBooking: BookingItem | undefined;
+    setBookings((prev) => {
+      const next = prev.map((b) => {
+        if (b.id === id) {
+          const u = { ...b, status };
+          updatedBooking = u;
+          return u;
+        }
+        return b;
       });
+      setLocal('bookings', next);
+      return next;
+    });
+
+    // 3. Immediately sync updated status to Google Sheets
+    if (updatedBooking) {
+      try {
+        await sendBookingToGoogleSheet(updatedBooking);
+      } catch (err) {
+        console.warn('[CMS] Google Sheets status sync warning:', err);
+      }
     }
   };
 
   const deleteBooking = async (id: string) => {
+    // 1. Direct delete from Supabase bookings table
+    try {
+      await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', id);
+    } catch (dbErr) {
+      console.warn('[CMS] Supabase delete booking error:', dbErr);
+      await safeSupabaseWrite('bookings', 'delete', undefined, 'id', id);
+    }
+
     const updated = bookings.filter((b) => b.id !== id);
     setBookings(updated);
     setLocal('bookings', updated);
-    await safeSupabaseWrite('bookings', 'delete', undefined, 'id', id);
   };
 
   const resetToDefaults = () => {
@@ -862,6 +950,7 @@ const toDbBooking = (item: Partial<BookingItem>) => {
         addEnquiry,
         markEnquiryRead,
         deleteEnquiry,
+        fetchBookingsFromDB,
         addBooking,
         updateBooking,
         updateBookingStatus,

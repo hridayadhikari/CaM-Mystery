@@ -32,6 +32,8 @@ export interface AboutPageImages {
   howWeWork2: string;
   howWeWork3: string;
   faqBackground: string;
+  ctaBackground?: string;
+  portfolioHero?: string;
 }
 
 export interface TeamMember {

@@ -3,6 +3,7 @@ import { NavPage, SelectedWorkItem, WeddingProject } from '../types';
 import { Play, Images, ChevronRight, MapPin, Calendar } from 'lucide-react';
 import { ScrollReveal } from '../components/ScrollReveal';
 import { useCMS } from '../lib/cmsStore';
+import { getOptimizedCloudinaryUrl, getCloudinarySrcSet } from '../lib/cloudinary';
 
 interface HomeViewProps {
   onNavigate: (page: NavPage, pkg?: string, initialPortfolioTab?: 'photos' | 'projects') => void;
@@ -17,7 +18,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onOpenVideo,
   onOpenProject,
 }) => {
-  const { heroSlides, selectedWork, testimonials, videoFeature, weddingProjects } = useCMS();
+  const { heroSlides, selectedWork, testimonials, videoFeature, weddingProjects, aboutImages } = useCMS();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Auto advance hero slider every 6 seconds
@@ -33,23 +34,31 @@ export const HomeView: React.FC<HomeViewProps> = ({
     <div className="w-full">
       {/* 1. Hero Carousel taking the place of the transparent header at the very top */}
       <section className="relative w-full h-screen min-h-[640px] max-h-[1100px] bg-neutral-950 overflow-hidden">
-        {heroSlides.map((slide, idx) => (
-          <div
-            key={slide.id}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              idx === currentSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
-          >
-            <img
-              src={slide.imageUrl}
-              alt={slide.title}
-              className="w-full h-full object-cover filter brightness-[0.82] contrast-[1.04]"
-              style={{ objectPosition: 'center 18%' }}
-            />
-            {/* Subtle top gradient for transparent header legibility and bottom gradient for indicators */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/65 pointer-events-none" />
-          </div>
-        ))}
+        {heroSlides.map((slide, idx) => {
+          const isLCP = idx === 0;
+          return (
+            <div
+              key={slide.id}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                idx === currentSlide ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              }`}
+            >
+              <img
+                src={getOptimizedCloudinaryUrl(slide.imageUrl, { width: 1600 })}
+                srcSet={getCloudinarySrcSet(slide.imageUrl, [800, 1200, 1600, 2000])}
+                sizes="100vw"
+                alt={slide.title}
+                className="w-full h-full object-cover filter brightness-[0.82] contrast-[1.04]"
+                style={{ objectPosition: 'center 18%' }}
+                loading={isLCP ? 'eager' : 'lazy'}
+                decoding={isLCP ? 'sync' : 'async'}
+                fetchPriority={isLCP ? 'high' : 'auto'}
+              />
+              {/* Subtle top gradient for transparent header legibility and bottom gradient for indicators */}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-black/65 pointer-events-none" />
+            </div>
+          );
+        })}
 
         {/* Carousel indicators (3 dashes at bottom) */}
         <div className="absolute bottom-10 left-0 right-0 z-20 flex justify-center items-center space-x-3">
@@ -113,10 +122,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     className="group relative aspect-[4/5] bg-neutral-100 overflow-hidden cursor-pointer"
                   >
                     <img
-                      src={item.imageUrl}
+                      src={getOptimizedCloudinaryUrl(item.imageUrl, { width: 800 })}
+                      srcSet={getCloudinarySrcSet(item.imageUrl, [400, 800, 1200])}
+                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 300px"
                       alt={item.title}
                       className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105 filter brightness-[0.97]"
                       loading="lazy"
+                      decoding="async"
                     />
                   <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
                     <span className="text-[10px] tracking-[0.2em] uppercase text-white/80">
@@ -194,10 +206,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   {/* Image cover */}
                   <div className="relative aspect-[4/3] bg-neutral-100 overflow-hidden">
                     <img
-                      src={project.coverImage}
+                      src={getOptimizedCloudinaryUrl(project.coverImage, { width: 800 })}
+                      srcSet={getCloudinarySrcSet(project.coverImage, [400, 800, 1200])}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
                       alt={project.coupleNames}
                       className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
                       loading="lazy"
+                      decoding="async"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent opacity-80 group-hover:opacity-95 transition-opacity" />
 
@@ -271,7 +286,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
       )}
 
       {/* 4. Pre-Wedding Cinema & Films Section */}
-      <section className="py-20 sm:py-28 px-6 sm:px-12 max-w-6xl mx-auto border-t border-neutral-100">
+      {Boolean(videoFeature?.videoUrl) && (
+        <section className="py-20 sm:py-28 px-6 sm:px-12 max-w-6xl mx-auto border-t border-neutral-100">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 sm:gap-16 items-center">
           {/* Left Column Text */}
           <ScrollReveal distance={18} duration={0.7} className="space-y-6">
@@ -335,6 +351,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </ScrollReveal>
         </div>
       </section>
+      )}
 
       {/* 5. Kind Words Testimonials */}
       <section className="py-24 sm:py-32 px-6 sm:px-12 bg-[#fafafa] border-t border-neutral-100">
@@ -370,28 +387,44 @@ export const HomeView: React.FC<HomeViewProps> = ({
       <section className="relative w-full py-32 sm:py-44 px-6 text-center bg-neutral-950 overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0">
-          <img
-            src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=2000&q=85"
-            alt="Bride in lehenga at dusk"
-            className="w-full h-full object-cover filter brightness-[0.4] contrast-[1.1]"
-            style={{ objectPosition: 'center 22%' }}
-          />
+          {(() => {
+            const ctaImage =
+              aboutImages?.ctaBackground ||
+              'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=2000&q=85';
+            return (
+              <img
+                key={ctaImage}
+                src={getOptimizedCloudinaryUrl(ctaImage, { width: 1600 })}
+                srcSet={getCloudinarySrcSet(ctaImage, [800, 1200, 1600, 2000])}
+                sizes="100vw"
+                alt="Bride in lehenga at dusk"
+                className="w-full h-full object-cover filter brightness-[0.4] contrast-[1.1]"
+                style={{ objectPosition: 'center 22%' }}
+                loading="lazy"
+                decoding="async"
+              />
+            );
+          })()}
           <div className="absolute inset-0 bg-black/60" />
         </div>
 
-        {/* Content */}
-        <ScrollReveal distance={22} duration={0.75} className="relative z-10 max-w-3xl mx-auto space-y-6">
-          <p className="text-[11px] tracking-[0.25em] uppercase text-neutral-300 font-medium">
+        {/* Content - strictly centered */}
+        <ScrollReveal
+          distance={22}
+          duration={0.75}
+          className="relative z-10 max-w-3xl mx-auto flex flex-col items-center justify-center text-center space-y-6"
+        >
+          <p className="w-full text-center text-[11px] sm:text-xs tracking-[0.25em] sm:tracking-[0.3em] uppercase text-neutral-300 font-medium">
             RESERVE YOUR DATE BEFORE IT'S GONE
           </p>
-          <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl text-white font-normal tracking-wide">
+          <h2 className="w-full text-center font-serif text-3xl sm:text-5xl md:text-6xl text-white font-normal tracking-wide leading-tight">
             Let's Make Something Together
           </h2>
-          <div className="pt-2 sm:pt-4">
+          <div className="pt-2 sm:pt-4 flex justify-center w-full">
             <button
               id="cta-get-in-touch-btn"
               onClick={() => onNavigate('CONTACT')}
-              className="inline-flex items-center px-6 sm:px-8 py-3 sm:py-3.5 border border-white/70 text-white hover:bg-white hover:text-neutral-900 transition-all text-[11px] sm:text-xs tracking-[0.16em] sm:tracking-[0.22em] uppercase font-medium cursor-pointer"
+              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-3.5 border border-white/70 text-white hover:bg-white hover:text-neutral-900 transition-all text-[11px] sm:text-xs tracking-[0.16em] sm:tracking-[0.22em] uppercase font-medium cursor-pointer"
             >
               <span>GET IN TOUCH</span>
               <span className="ml-2 font-sans text-xs sm:text-sm">→</span>
