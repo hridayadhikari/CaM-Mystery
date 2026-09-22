@@ -6,9 +6,9 @@ import { useCMS } from '../lib/cmsStore';
 import { getOptimizedCloudinaryUrl, getCloudinarySrcSet } from '../lib/cloudinary';
 
 interface HomeViewProps {
-  onNavigate: (page: NavPage, pkg?: string, initialPortfolioTab?: 'photos' | 'projects') => void;
+  onNavigate: (page: NavPage, pkg?: string, initialPortfolioTab?: 'photos' | 'projects' | 'videos') => void;
   onOpenLightbox: (item: SelectedWorkItem) => void;
-  onOpenVideo: () => void;
+  onOpenVideo: (video?: { url: string; title?: string; poster?: string }) => void;
   onOpenProject?: (project: WeddingProject) => void;
 }
 
@@ -49,7 +49,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 sizes="100vw"
                 alt={slide.title}
                 className="w-full h-full object-cover filter brightness-[0.82] contrast-[1.04]"
-                style={{ objectPosition: 'center 18%' }}
+                style={{ objectPosition: 'center' }}
                 loading={isLCP ? 'eager' : 'lazy'}
                 decoding={isLCP ? 'sync' : 'async'}
                 fetchPriority={isLCP ? 'high' : 'auto'}
@@ -308,11 +308,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </p>
             <div className="pt-2">
               <button
-                id="home-watch-films-btn"
-                onClick={onOpenVideo}
+                id="home-explore-videos-cta"
+                onClick={() => onNavigate('PORTFOLIO', undefined, 'videos')}
                 className="inline-flex items-center text-[10px] sm:text-xs tracking-[0.16em] sm:tracking-[0.25em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer"
               >
-                <span>WATCH PRE-WEDDING FILM</span>
+                <span>EXPLORE ALL PRE-WEDDING VIDEOS</span>
                 <span className="ml-1.5 sm:ml-2 font-sans text-xs sm:text-sm">→</span>
               </button>
             </div>
@@ -321,7 +321,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           {/* Right Column Video Player / Frame */}
           <ScrollReveal distance={20} delay={0.15} duration={0.7}>
             <div
-              onClick={onOpenVideo}
+              onClick={() => onOpenVideo()}
               className="relative aspect-[16/10] bg-neutral-950 rounded-sm overflow-hidden group cursor-pointer shadow-xl border border-neutral-200"
             >
               <video

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, CheckCircle, AlertCircle, Loader2, Film, Play, X, ExternalLink } from 'lucide-react';
-import { uploadToCloudinary, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '../../lib/cloudinary';
+import { uploadToCloudinary, MAX_VIDEO_SIZE_BYTES, MAX_VIDEO_SIZE_MB } from '../../lib/cloudinary';
 
 interface CloudinaryVideoUploadProps {
   label: string;
@@ -88,9 +88,9 @@ export const CloudinaryVideoUpload: React.FC<CloudinaryVideoUploadProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > MAX_FILE_SIZE_BYTES) {
+    if (file.size > MAX_VIDEO_SIZE_BYTES) {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      setError(`Video file size (${sizeMb} MB) exceeds the 10MB limit. Rejected before upload.`);
+      setError(`Video file size (${sizeMb} MB) exceeds the ${MAX_VIDEO_SIZE_MB}MB limit. Rejected before upload.`);
       setPendingFile(null);
       e.target.value = '';
       return;

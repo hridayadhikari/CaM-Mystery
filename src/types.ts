@@ -26,6 +26,19 @@ export interface VideoFeature {
   posterUrl: string;
 }
 
+export interface PreWeddingVideo {
+  id: string;
+  title: string;
+  coupleNames?: string;
+  location?: string;
+  videoUrl: string;
+  posterUrl?: string;
+  description?: string;
+  displayOrder?: number;
+  isFeatured?: boolean;
+  createdAt?: string;
+}
+
 export interface AboutPageImages {
   storyPortrait: string;
   howWeWork1: string;

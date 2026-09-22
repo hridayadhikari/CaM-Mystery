@@ -10,8 +10,14 @@ export interface CloudinaryUploadResponse {
   resource_type?: string;
 }
 
-export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB limit
-export const MAX_FILE_SIZE_MB = 10;
+export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB limit for images
+export const MAX_IMAGE_SIZE_MB = 10;
+export const MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024; // 100MB limit for videos
+export const MAX_VIDEO_SIZE_MB = 100;
+
+// Backward-compatible alias for existing imports
+export const MAX_FILE_SIZE_BYTES = MAX_IMAGE_SIZE_BYTES;
+export const MAX_FILE_SIZE_MB = MAX_IMAGE_SIZE_MB;
 
 /**
  * Uploads a file (image or video) directly to Cloudinary using unsigned client-side upload.
@@ -23,10 +29,14 @@ export async function uploadToCloudinary(
   resourceType: 'image' | 'video' | 'auto' = 'auto',
   onProgress?: (progressPercent: number) => void
 ): Promise<CloudinaryUploadResponse> {
-  if (file.size > MAX_FILE_SIZE_BYTES) {
+  const isVideo = resourceType === 'video' || (resourceType === 'auto' && file.type.startsWith('video/'));
+  const maxBytes = isVideo ? MAX_VIDEO_SIZE_BYTES : MAX_IMAGE_SIZE_BYTES;
+  const maxMb = isVideo ? MAX_VIDEO_SIZE_MB : MAX_IMAGE_SIZE_MB;
+
+  if (file.size > maxBytes) {
     const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
     throw new Error(
-      `File size (${sizeMb} MB) exceeds the maximum allowed limit of ${MAX_FILE_SIZE_MB} MB. Please select a smaller file.`
+      `${isVideo ? 'Video' : 'Image'} file size (${sizeMb} MB) exceeds the maximum allowed limit of ${maxMb} MB. Please select a smaller file.`
     );
   }
 

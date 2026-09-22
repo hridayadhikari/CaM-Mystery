@@ -50,10 +50,19 @@ function MainApp() {
         setCurrentPage('ADMIN');
       } else if (pathname === '/about' || hash === 'about') {
         setCurrentPage('ABOUT');
-      } else if (pathname === '/portfolio' || hash === 'portfolio' || hash === 'wedding-projects') {
+      } else if (
+        pathname === '/portfolio' ||
+        hash === 'portfolio' ||
+        hash === 'wedding-projects' ||
+        hash === 'videos' ||
+        hash === 'films' ||
+        hash === 'pre-wedding-films'
+      ) {
         setCurrentPage('PORTFOLIO');
         if (hash === 'wedding-projects') {
           setPortfolioInitialTab('projects');
+        } else if (hash === 'videos' || hash === 'films' || hash === 'pre-wedding-films') {
+          setPortfolioInitialTab('videos');
         }
       } else if (pathname === '/team' || pathname === '/know-our-team' || hash === 'team' || hash === 'know-our-team') {
         setCurrentPage('KNOW OUR TEAM');
@@ -75,7 +84,25 @@ function MainApp() {
     };
   }, [weddingProjects]);
 
-  const [portfolioInitialTab, setPortfolioInitialTab] = useState<'photos' | 'projects'>('photos');
+  const [portfolioInitialTab, setPortfolioInitialTab] = useState<'photos' | 'projects' | 'videos'>('photos');
+  const [activeVideoModalData, setActiveVideoModalData] = useState<{
+    url: string;
+    title?: string;
+    poster?: string;
+  } | null>(null);
+
+  const handleOpenVideoModal = (customVideo?: { url: string; title?: string; poster?: string }) => {
+    if (customVideo && customVideo.url) {
+      setActiveVideoModalData(customVideo);
+    } else {
+      setActiveVideoModalData({
+        url: videoFeature.videoUrl,
+        title: [videoFeature.title, videoFeature.subtitle].filter(Boolean).join(' • '),
+        poster: videoFeature.posterUrl,
+      });
+    }
+    setIsVideoModalOpen(true);
+  };
 
   const handleOpenProject = (project: WeddingProject) => {
     setActiveProject(project);
@@ -91,7 +118,7 @@ function MainApp() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleNavigate = (page: NavPage, preselectedPkg?: string, initialPortfolioTab?: 'photos' | 'projects') => {
+  const handleNavigate = (page: NavPage, preselectedPkg?: string, initialPortfolioTab?: 'photos' | 'projects' | 'videos') => {
     setActiveProject(null);
     setCurrentPage(page);
     if (preselectedPkg) {
@@ -105,7 +132,12 @@ function MainApp() {
     const pathMapping: Record<NavPage, string> = {
       'HOME': '/',
       'ABOUT': '/#about',
-      'PORTFOLIO': initialPortfolioTab === 'projects' ? '/#wedding-projects' : '/#portfolio',
+      'PORTFOLIO':
+        initialPortfolioTab === 'projects'
+          ? '/#wedding-projects'
+          : initialPortfolioTab === 'videos'
+          ? '/#videos'
+          : '/#portfolio',
       'KNOW OUR TEAM': '/#team',
       'PRICING': '/#pricing',
       'CONTACT': '/#contact',
@@ -138,7 +170,7 @@ function MainApp() {
               <HomeView
                 onNavigate={handleNavigate}
                 onOpenLightbox={(item) => setActiveLightboxItem(item)}
-                onOpenVideo={() => setIsVideoModalOpen(true)}
+                onOpenVideo={handleOpenVideoModal}
                 onOpenProject={handleOpenProject}
               />
             )}
@@ -151,7 +183,7 @@ function MainApp() {
                 initialTab={portfolioInitialTab}
                 onNavigate={handleNavigate}
                 onOpenLightbox={(item) => setActiveLightboxItem(item)}
-                onOpenVideo={() => setIsVideoModalOpen(true)}
+                onOpenVideo={handleOpenVideoModal}
                 onOpenProject={handleOpenProject}
               />
             )}
@@ -188,9 +220,12 @@ function MainApp() {
       <VideoModal
         isOpen={isVideoModalOpen}
         onClose={() => setIsVideoModalOpen(false)}
-        videoUrl={videoFeature.videoUrl}
-        videoTitle={[videoFeature.title, videoFeature.subtitle].filter(Boolean).join(' • ')}
-        posterUrl={videoFeature.posterUrl}
+        videoUrl={activeVideoModalData?.url || videoFeature.videoUrl}
+        videoTitle={
+          activeVideoModalData?.title ||
+          [videoFeature.title, videoFeature.subtitle].filter(Boolean).join(' • ')
+        }
+        posterUrl={activeVideoModalData?.poster || videoFeature.posterUrl}
       />
     </div>
   );

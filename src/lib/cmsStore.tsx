@@ -14,6 +14,7 @@ import {
   BookingItem,
   BookingFormData,
   BookingStatus,
+  PreWeddingVideo,
 } from '../types';
 import { supabase } from './supabase';
 import { sendBookingToGoogleSheet } from './googleSheets';
@@ -28,6 +29,7 @@ interface CMSContextType {
   testimonials: Testimonial[];
   faqItems: FaqItem[];
   videoFeature: VideoFeature;
+  preWeddingVideos: PreWeddingVideo[];
   aboutImages: AboutPageImages;
   enquiries: EnquiryItem[];
   bookings: BookingItem[];
@@ -39,6 +41,11 @@ interface CMSContextType {
   updateHeroSlides: (slides: HeroSlide[]) => Promise<void>;
   updateVideoFeature: (feature: VideoFeature) => Promise<void>;
   updateAboutImages: (images: AboutPageImages) => Promise<void>;
+
+  // Pre-Wedding Videos CRUD
+  addPreWeddingVideo: (video: PreWeddingVideo) => Promise<void>;
+  updatePreWeddingVideo: (video: PreWeddingVideo) => Promise<void>;
+  deletePreWeddingVideo: (id: string) => Promise<void>;
 
   // Wedding Projects CRUD
   addWeddingProject: (proj: WeddingProject) => Promise<void>;
@@ -167,6 +174,19 @@ const normalizeEnquiry = (row: any): EnquiryItem => ({
   isRead: Boolean(row.isRead ?? row.isread ?? false),
 });
 
+const normalizePreWeddingVideo = (row: any): PreWeddingVideo => ({
+  id: String(row.id),
+  title: row.title || '',
+  coupleNames: row.coupleNames || row.couplenames || row.couple_names || '',
+  location: row.location || '',
+  videoUrl: row.videoUrl || row.videourl || row.video_url || '',
+  posterUrl: row.posterUrl || row.posterurl || row.poster_url || '',
+  description: row.description || '',
+  displayOrder: Number(row.displayOrder ?? row.displayorder ?? row.display_order ?? 0),
+  isFeatured: Boolean(row.isFeatured ?? row.isfeatured ?? row.is_featured ?? false),
+  createdAt: row.createdAt || row.createdat || row.created_at || new Date().toISOString(),
+});
+
 const normalizeBooking = (row: any): BookingItem => ({
   id: String(row.id),
   name: row.name || '',
@@ -238,6 +258,9 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [weddingProjects, setWeddingProjects] = useState<WeddingProject[]>(() =>
     getLocal('wedding_projects', []).map(normalizeWeddingProject)
   );
+  const [preWeddingVideos, setPreWeddingVideos] = useState<PreWeddingVideo[]>(() =>
+    getLocal('pre_wedding_videos', []).map(normalizePreWeddingVideo)
+  );
   const [enquiries, setEnquiries] = useState<EnquiryItem[]>(() =>
     getLocal('enquiries', []).map(normalizeEnquiry)
   );
@@ -276,6 +299,10 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } else if (row.key === 'wedding_projects' && Array.isArray(row.value)) {
             setWeddingProjects(row.value);
             setLocal('wedding_projects', row.value);
+          } else if (row.key === 'pre_wedding_videos' && Array.isArray(row.value)) {
+            const normalized = row.value.map(normalizePreWeddingVideo);
+            setPreWeddingVideos(normalized);
+            setLocal('pre_wedding_videos', normalized);
           }
         });
       }
@@ -423,6 +450,39 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch (err) {
         console.warn('[CMS] bookings fetch exception:', err);
       }
+
+      // 10. Fetch Pre-Wedding Videos (table with fallback to site_settings)
+      try {
+        let vidData: any[] | null = null;
+        let vidError: any = null;
+
+        const resVid = await supabase
+          .from('pre_wedding_videos')
+          .select('*')
+          .order('display_order', { ascending: true });
+
+        if (resVid.error) {
+          // Attempt select without display_order ordering
+          const plainRes = await supabase.from('pre_wedding_videos').select('*');
+          if (plainRes.error) {
+            vidError = plainRes.error;
+          } else {
+            vidData = plainRes.data;
+          }
+        } else {
+          vidData = resVid.data;
+        }
+
+        if (vidError) {
+          console.info('[CMS] pre_wedding_videos table query fallback (may use site_settings):', vidError.message);
+        } else if (vidData && Array.isArray(vidData) && vidData.length > 0) {
+          const normalized = vidData.map(normalizePreWeddingVideo);
+          setPreWeddingVideos(normalized);
+          setLocal('pre_wedding_videos', normalized);
+        }
+      } catch (err) {
+        console.info('[CMS] pre_wedding_videos fetch exception, using cached state:', err);
+      }
     } catch (err) {
       console.warn('[CMS] Supabase load error:', err);
     } finally {
@@ -479,6 +539,21 @@ const toDbBooking = (item: Partial<BookingItem>) => {
   if (item.eventLocation !== undefined) res.event_location = item.eventLocation;
   if (item.remarks !== undefined) res.remarks = item.remarks;
   if (item.status !== undefined) res.status = item.status;
+  if (item.createdAt !== undefined) res.created_at = item.createdAt;
+  return res;
+};
+
+const toDbPreWeddingVideo = (item: Partial<PreWeddingVideo>) => {
+  const res: Record<string, any> = {};
+  if (item.id !== undefined) res.id = item.id;
+  if (item.title !== undefined) res.title = item.title;
+  if (item.coupleNames !== undefined) res.couple_names = item.coupleNames;
+  if (item.location !== undefined) res.location = item.location;
+  if (item.videoUrl !== undefined) res.video_url = item.videoUrl;
+  if (item.posterUrl !== undefined) res.poster_url = item.posterUrl;
+  if (item.description !== undefined) res.description = item.description;
+  if (item.displayOrder !== undefined) res.display_order = item.displayOrder;
+  if (item.isFeatured !== undefined) res.is_featured = item.isFeatured;
   if (item.createdAt !== undefined) res.created_at = item.createdAt;
   return res;
 };
@@ -874,6 +949,7 @@ const toDbBooking = (item: Partial<BookingItem>) => {
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'video_feature');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'about_images');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'wedding_projects');
+    localStorage.removeItem(STORAGE_KEY_PREFIX + 'pre_wedding_videos');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'enquiries');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'bookings');
     fetchAllFromDB();
@@ -908,6 +984,66 @@ const toDbBooking = (item: Partial<BookingItem>) => {
     await safeSupabaseWrite('site_settings', 'upsert', { key: 'wedding_projects', value: updated });
   };
 
+  // Pre-Wedding Videos CRUD (Dual write: Supabase pre_wedding_videos table + site_settings fallback)
+  const addPreWeddingVideo = async (video: PreWeddingVideo) => {
+    const updated = [video, ...preWeddingVideos];
+    setPreWeddingVideos(updated);
+    setLocal('pre_wedding_videos', updated);
+
+    // 1. Direct table write attempt
+    try {
+      const dbPayload = toDbPreWeddingVideo(video);
+      const { error } = await supabase.from('pre_wedding_videos').insert(dbPayload);
+      if (error) {
+        console.warn('[CMS] pre_wedding_videos table insert warning, falling back to site_settings:', error.message);
+        await safeSupabaseWrite('site_settings', 'upsert', { key: 'pre_wedding_videos', value: updated });
+      }
+    } catch (e) {
+      console.warn('[CMS] pre_wedding_videos insert exception, saving to site_settings:', e);
+      await safeSupabaseWrite('site_settings', 'upsert', { key: 'pre_wedding_videos', value: updated });
+    }
+  };
+
+  const updatePreWeddingVideo = async (video: PreWeddingVideo) => {
+    const updated = preWeddingVideos.map((v) => (v.id === video.id ? video : v));
+    setPreWeddingVideos(updated);
+    setLocal('pre_wedding_videos', updated);
+
+    // 1. Direct table write attempt
+    try {
+      const dbPayload = toDbPreWeddingVideo(video);
+      const { error } = await supabase
+        .from('pre_wedding_videos')
+        .update(dbPayload)
+        .eq('id', video.id);
+      if (error) {
+        console.warn('[CMS] pre_wedding_videos table update warning, falling back to site_settings:', error.message);
+        await safeSupabaseWrite('site_settings', 'upsert', { key: 'pre_wedding_videos', value: updated });
+      }
+    } catch (e) {
+      console.warn('[CMS] pre_wedding_videos update exception, saving to site_settings:', e);
+      await safeSupabaseWrite('site_settings', 'upsert', { key: 'pre_wedding_videos', value: updated });
+    }
+  };
+
+  const deletePreWeddingVideo = async (id: string) => {
+    const updated = preWeddingVideos.filter((v) => v.id !== id);
+    setPreWeddingVideos(updated);
+    setLocal('pre_wedding_videos', updated);
+
+    // 1. Direct table delete attempt
+    try {
+      const { error } = await supabase.from('pre_wedding_videos').delete().eq('id', id);
+      if (error) {
+        console.warn('[CMS] pre_wedding_videos table delete warning, falling back to site_settings:', error.message);
+        await safeSupabaseWrite('site_settings', 'upsert', { key: 'pre_wedding_videos', value: updated });
+      }
+    } catch (e) {
+      console.warn('[CMS] pre_wedding_videos delete exception, saving to site_settings:', e);
+      await safeSupabaseWrite('site_settings', 'upsert', { key: 'pre_wedding_videos', value: updated });
+    }
+  };
+
   return (
     <CMSContext.Provider
       value={{
@@ -920,6 +1056,7 @@ const toDbBooking = (item: Partial<BookingItem>) => {
         testimonials,
         faqItems,
         videoFeature,
+        preWeddingVideos,
         aboutImages,
         enquiries,
         bookings,
@@ -929,6 +1066,9 @@ const toDbBooking = (item: Partial<BookingItem>) => {
         updateHeroSlides,
         updateVideoFeature,
         updateAboutImages,
+        addPreWeddingVideo,
+        updatePreWeddingVideo,
+        deletePreWeddingVideo,
         addWeddingProject,
         updateWeddingProject,
         deleteWeddingProject,

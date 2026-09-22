@@ -95,6 +95,20 @@ CREATE TABLE IF NOT EXISTS public.bookings (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 9. PRE-WEDDING VIDEOS TABLE
+CREATE TABLE IF NOT EXISTS public.pre_wedding_videos (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    couple_names TEXT,
+    location TEXT,
+    video_url TEXT NOT NULL,
+    poster_url TEXT,
+    description TEXT,
+    display_order INT DEFAULT 0,
+    is_featured BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- ==============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- Allows read access to all users and write access for CMS / Contact form
@@ -108,12 +122,18 @@ ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.faqs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pre_wedding_videos ENABLE ROW LEVEL SECURITY;
 
 -- Clean up existing policies if any
 DROP POLICY IF EXISTS "Public can read site_settings" ON public.site_settings;
 DROP POLICY IF EXISTS "Public can manage site_settings" ON public.site_settings;
 CREATE POLICY "Public can read site_settings" ON public.site_settings FOR SELECT USING (true);
 CREATE POLICY "Public can manage site_settings" ON public.site_settings FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can read pre_wedding_videos" ON public.pre_wedding_videos;
+DROP POLICY IF EXISTS "Public can manage pre_wedding_videos" ON public.pre_wedding_videos;
+CREATE POLICY "Public can read pre_wedding_videos" ON public.pre_wedding_videos FOR SELECT USING (true);
+CREATE POLICY "Public can manage pre_wedding_videos" ON public.pre_wedding_videos FOR ALL USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Public can read portfolio" ON public.portfolio;
 DROP POLICY IF EXISTS "Public can manage portfolio" ON public.portfolio;

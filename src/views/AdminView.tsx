@@ -25,6 +25,8 @@ import {
   Phone,
   Eye,
   FileSpreadsheet,
+  Film,
+  Play,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useCMS } from '../lib/cmsStore';
@@ -39,6 +41,7 @@ import {
   WeddingProject,
   BookingItem,
   BookingStatus,
+  PreWeddingVideo,
 } from '../types';
 import { CloudinaryImageUpload } from '../components/admin/CloudinaryImageUpload';
 import { CloudinaryVideoUpload } from '../components/admin/CloudinaryVideoUpload';
@@ -73,6 +76,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     testimonials,
     faqItems,
     videoFeature,
+    preWeddingVideos,
     aboutImages,
     enquiries,
     bookings,
@@ -80,6 +84,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     updateHeroSlides,
     updateVideoFeature,
     updateAboutImages,
+    addPreWeddingVideo,
+    updatePreWeddingVideo,
+    deletePreWeddingVideo,
     addWeddingProject,
     updateWeddingProject,
     deleteWeddingProject,
@@ -147,8 +154,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     };
   }, []);
 
-  // Portfolio Subtab: 'single' (individual photos) vs 'projects' (full wedding stories)
-  const [portfolioSubTab, setPortfolioSubTab] = useState<'single' | 'projects'>('single');
+  // Portfolio Subtab: 'single' (individual photos) vs 'projects' (full wedding stories) vs 'videos' (pre-wedding films)
+  const [portfolioSubTab, setPortfolioSubTab] = useState<'single' | 'projects' | 'videos'>('single');
+
+  // Pre-Wedding Video Form Modals
+  const [newVideoModal, setNewVideoModal] = useState(false);
+  const [newVideoForm, setNewVideoForm] = useState<Omit<PreWeddingVideo, 'id'>>({
+    title: '',
+    coupleNames: '',
+    location: '',
+    videoUrl: '',
+    posterUrl: '',
+    description: '',
+    displayOrder: 0,
+    isFeatured: false,
+  });
+  const [editingVideo, setEditingVideo] = useState<PreWeddingVideo | null>(null);
 
   // Wedding Project Form Modals
   const [newProjectModal, setNewProjectModal] = useState(false);
@@ -684,7 +705,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                         <Plus size={14} />
                         <span>Upload Single Photo</span>
                       </button>
-                    ) : (
+                    ) : portfolioSubTab === 'projects' ? (
                       <button
                         onClick={() => {
                           setNewProjectForm({
@@ -703,15 +724,36 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                         <Plus size={14} />
                         <span>Add Wedding Project</span>
                       </button>
+                    ) : (
+                      <button
+                        id="admin-add-video-btn"
+                        onClick={() => {
+                          setNewVideoForm({
+                            title: '',
+                            coupleNames: '',
+                            location: '',
+                            videoUrl: '',
+                            posterUrl: '',
+                            description: '',
+                            displayOrder: preWeddingVideos.length,
+                            isFeatured: false,
+                          });
+                          setNewVideoModal(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs uppercase tracking-wider rounded-xs cursor-pointer transition-colors"
+                      >
+                        <Plus size={14} />
+                        <span>Add Pre-Wedding Video</span>
+                      </button>
                     )}
                   </div>
                 </div>
 
                 {/* Subtab Toggle Buttons */}
-                <div className="flex border-b border-neutral-200 gap-6">
+                <div className="flex border-b border-neutral-200 gap-6 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                   <button
                     onClick={() => setPortfolioSubTab('single')}
-                    className={`pb-3 text-xs tracking-wider uppercase font-medium border-b-2 -mb-px transition-colors cursor-pointer flex items-center gap-2 ${
+                    className={`pb-3 text-xs tracking-wider uppercase font-medium border-b-2 -mb-px transition-colors cursor-pointer flex items-center gap-2 shrink-0 ${
                       portfolioSubTab === 'single'
                         ? 'border-neutral-900 text-neutral-900 font-semibold'
                         : 'border-transparent text-neutral-400 hover:text-neutral-700'
@@ -725,7 +767,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
 
                   <button
                     onClick={() => setPortfolioSubTab('projects')}
-                    className={`pb-3 text-xs tracking-wider uppercase font-medium border-b-2 -mb-px transition-colors cursor-pointer flex items-center gap-2 ${
+                    className={`pb-3 text-xs tracking-wider uppercase font-medium border-b-2 -mb-px transition-colors cursor-pointer flex items-center gap-2 shrink-0 ${
                       portfolioSubTab === 'projects'
                         ? 'border-neutral-900 text-neutral-900 font-semibold'
                         : 'border-transparent text-neutral-400 hover:text-neutral-700'
@@ -734,6 +776,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                     <span>Wedding Projects (Stories)</span>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
                       {weddingProjects.length}
+                    </span>
+                  </button>
+
+                  <button
+                    id="admin-subtab-videos"
+                    onClick={() => setPortfolioSubTab('videos')}
+                    className={`pb-3 text-xs tracking-wider uppercase font-medium border-b-2 -mb-px transition-colors cursor-pointer flex items-center gap-2 shrink-0 ${
+                      portfolioSubTab === 'videos'
+                        ? 'border-neutral-900 text-neutral-900 font-semibold'
+                        : 'border-transparent text-neutral-400 hover:text-neutral-700'
+                    }`}
+                  >
+                    <Film size={13} className={portfolioSubTab === 'videos' ? 'text-neutral-900' : 'text-neutral-400'} />
+                    <span>Pre-Wedding Videos</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
+                      {preWeddingVideos.length}
                     </span>
                   </button>
                 </div>
@@ -907,6 +965,171 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                                   }}
                                   className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xs text-xs flex items-center gap-1 cursor-pointer"
                                   title="Delete Project"
+                                >
+                                  <Trash2 size={13} />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* View 3: Pre-Wedding Videos Grid */}
+                {portfolioSubTab === 'videos' && (
+                  <div className="space-y-4">
+                    {preWeddingVideos.length === 0 ? (
+                      <div className="bg-white border border-neutral-200 p-12 text-center rounded-xs space-y-3">
+                        <Film size={32} className="mx-auto text-neutral-400" />
+                        <h3 className="font-serif text-lg text-neutral-900">No Pre-Wedding Videos Yet</h3>
+                        <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                          Upload high-definition pre-wedding films or teaser videos to showcase them in the portfolio films tab.
+                        </p>
+                        <button
+                          onClick={() => {
+                            setNewVideoForm({
+                              title: '',
+                              coupleNames: '',
+                              location: '',
+                              videoUrl: '',
+                              posterUrl: '',
+                              description: '',
+                              displayOrder: 0,
+                              isFeatured: false,
+                            });
+                            setNewVideoModal(true);
+                          }}
+                          className="px-4 py-2 bg-neutral-900 text-white text-xs uppercase tracking-wider rounded-xs cursor-pointer inline-flex items-center gap-1.5"
+                        >
+                          <Plus size={14} />
+                          <span>Add First Pre-Wedding Video</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {preWeddingVideos.map((video) => (
+                          <div
+                            key={video.id}
+                            className="bg-white border border-neutral-200 rounded-xs overflow-hidden shadow-xs flex flex-col justify-between"
+                          >
+                            <div>
+                              {/* Video thumbnail or video player */}
+                              <div className="aspect-[16/10] bg-neutral-950 relative overflow-hidden group">
+                                {video.posterUrl ? (
+                                  <img
+                                    src={getOptimizedCloudinaryUrl(video.posterUrl, { width: 600 })}
+                                    alt={video.title}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <video
+                                    src={video.videoUrl}
+                                    className="w-full h-full object-cover filter brightness-90"
+                                    muted
+                                  />
+                                )}
+
+                                <div className="absolute inset-0 bg-black/25 flex items-center justify-center pointer-events-none">
+                                  <div className="w-10 h-10 rounded-full bg-white/90 text-neutral-900 flex items-center justify-center shadow-md">
+                                    <Play size={16} className="fill-neutral-900 translate-x-0.5" />
+                                  </div>
+                                </div>
+
+                                {video.isFeatured && (
+                                  <div className="absolute top-2 left-2 bg-neutral-950/90 text-amber-400 px-2 py-0.5 text-[9px] uppercase tracking-wider font-semibold rounded-xs flex items-center gap-1">
+                                    <Star size={10} className="fill-amber-400 text-amber-400" />
+                                    <span>Featured</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="p-4 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  {video.coupleNames && (
+                                    <span className="text-[10px] tracking-wider uppercase text-neutral-400 font-medium">
+                                      {video.coupleNames}
+                                    </span>
+                                  )}
+                                  <span className="text-[9px] text-neutral-400 font-mono">
+                                    Order: {video.displayOrder ?? 0}
+                                  </span>
+                                </div>
+
+                                <h3 className="font-serif text-base text-neutral-900 font-medium truncate">
+                                  {video.title}
+                                </h3>
+
+                                {video.location && (
+                                  <p className="text-xs text-neutral-500">
+                                    📍 {video.location}
+                                  </p>
+                                )}
+
+                                {video.description && (
+                                  <p className="text-xs text-neutral-600 line-clamp-2 pt-0.5 font-sans">
+                                    {video.description}
+                                  </p>
+                                )}
+
+                                <div className="pt-1">
+                                  <a
+                                    href={video.videoUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-[11px] text-neutral-500 hover:text-neutral-900 flex items-center gap-1 truncate"
+                                  >
+                                    <ExternalLink size={11} className="shrink-0" />
+                                    <span className="truncate">{video.videoUrl}</span>
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="p-4 pt-2 border-t border-neutral-100 flex items-center justify-between gap-2">
+                              <button
+                                onClick={async () => {
+                                  const updated = { ...video, isFeatured: !video.isFeatured };
+                                  await updatePreWeddingVideo(updated);
+                                  showToast(updated.isFeatured ? 'Marked as featured film.' : 'Unmarked featured film.');
+                                }}
+                                className={`p-1.5 rounded-xs text-xs flex items-center gap-1 cursor-pointer transition-colors ${
+                                  video.isFeatured
+                                    ? 'bg-amber-100 text-amber-900 hover:bg-amber-200'
+                                    : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-600'
+                                }`}
+                                title={video.isFeatured ? 'Remove Featured Badge' : 'Set as Featured'}
+                              >
+                                <Star size={12} className={video.isFeatured ? 'fill-amber-500 text-amber-500' : ''} />
+                                <span className="text-[10px] uppercase tracking-wider">{video.isFeatured ? 'Featured' : 'Feature'}</span>
+                              </button>
+
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setEditingVideo({ ...video })}
+                                  className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xs text-xs flex items-center gap-1 cursor-pointer"
+                                  title="Edit Video"
+                                >
+                                  <Edit2 size={13} />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    requestDeleteConfirm(
+                                      'Delete Pre-Wedding Video',
+                                      `Are you sure you want to permanently delete "${video.title}"?`,
+                                      async () => {
+                                        await deletePreWeddingVideo(video.id);
+                                        showToast('Video removed.');
+                                      }
+                                    );
+                                  }}
+                                  className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xs text-xs flex items-center gap-1 cursor-pointer"
+                                  title="Delete Video"
                                 >
                                   <Trash2 size={13} />
                                   <span>Delete</span>
@@ -2598,6 +2821,328 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                   await updateWeddingProject(editingProject);
                   setEditingProject(null);
                   showToast('Wedding project updated.');
+                }}
+                className="px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs uppercase tracking-wider rounded-xs cursor-pointer font-medium"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 0C. Modal: Add New Pre-Wedding Video */}
+      {newVideoModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-neutral-200 p-6 sm:p-8 rounded-sm shadow-2xl max-w-xl w-full space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+              <div>
+                <span className="text-[10px] tracking-wider uppercase text-neutral-400 font-medium">
+                  PRE-WEDDING CINEMA
+                </span>
+                <h3 className="font-serif text-xl text-neutral-900 font-normal">
+                  Add New Pre-Wedding Video
+                </h3>
+              </div>
+              <button
+                onClick={() => setNewVideoModal(false)}
+                className="text-neutral-400 hover:text-neutral-700 p-1 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Film / Video Title *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Whispers of Udaipur"
+                    value={newVideoForm.title}
+                    onChange={(e) =>
+                      setNewVideoForm({ ...newVideoForm, title: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Couple Names
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Vikram & Radhika"
+                    value={newVideoForm.coupleNames || ''}
+                    onChange={(e) =>
+                      setNewVideoForm({ ...newVideoForm, coupleNames: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Udaipur, Rajasthan"
+                    value={newVideoForm.location || ''}
+                    onChange={(e) =>
+                      setNewVideoForm({ ...newVideoForm, location: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Display Order
+                  </label>
+                  <input
+                    type="number"
+                    value={newVideoForm.displayOrder || 0}
+                    onChange={(e) =>
+                      setNewVideoForm({ ...newVideoForm, displayOrder: parseInt(e.target.value, 10) || 0 })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                  Description / Cinematic Notes
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="A short description of this pre-wedding film story..."
+                  value={newVideoForm.description || ''}
+                  onChange={(e) =>
+                    setNewVideoForm({ ...newVideoForm, description: e.target.value })
+                  }
+                  className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                />
+              </div>
+
+              {/* Video URL Upload */}
+              <CloudinaryVideoUpload
+                label="Pre-Wedding Video File (Cloudinary Direct) *"
+                currentUrl={newVideoForm.videoUrl}
+                onUploaded={(url) => setNewVideoForm({ ...newVideoForm, videoUrl: url })}
+                helperText="Upload MP4 or MOV film file (max 100MB)"
+              />
+
+              {/* Poster Frame Upload */}
+              <CloudinaryImageUpload
+                label="Video Poster Frame (Cover Image Thumbnail)"
+                folder="images"
+                currentUrl={newVideoForm.posterUrl || ''}
+                onUploaded={(url) => setNewVideoForm({ ...newVideoForm, posterUrl: url })}
+              />
+
+              {/* Featured Checkbox */}
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="new-video-featured"
+                  checked={newVideoForm.isFeatured || false}
+                  onChange={(e) => setNewVideoForm({ ...newVideoForm, isFeatured: e.target.checked })}
+                  className="rounded-xs text-neutral-900 focus:ring-neutral-900"
+                />
+                <label htmlFor="new-video-featured" className="text-xs text-neutral-700 cursor-pointer select-none">
+                  Highlight as Featured Film in Portfolio &amp; Homepage
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-neutral-100">
+              <button
+                onClick={() => setNewVideoModal(false)}
+                className="px-4 py-2 border border-neutral-300 text-neutral-700 text-xs uppercase tracking-wider rounded-xs hover:bg-neutral-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!newVideoForm.title || !newVideoForm.videoUrl) {
+                    alert('Please provide at least a title and a video URL or upload.');
+                    return;
+                  }
+                  const newVid: PreWeddingVideo = {
+                    id: `vid-${Date.now()}`,
+                    title: newVideoForm.title,
+                    coupleNames: newVideoForm.coupleNames,
+                    location: newVideoForm.location,
+                    videoUrl: newVideoForm.videoUrl,
+                    posterUrl: newVideoForm.posterUrl,
+                    description: newVideoForm.description,
+                    displayOrder: newVideoForm.displayOrder ?? preWeddingVideos.length,
+                    isFeatured: Boolean(newVideoForm.isFeatured),
+                    createdAt: new Date().toISOString(),
+                  };
+                  await addPreWeddingVideo(newVid);
+                  setNewVideoModal(false);
+                  showToast('Pre-wedding video added successfully.');
+                }}
+                className="px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs uppercase tracking-wider rounded-xs cursor-pointer font-medium"
+              >
+                Add Video
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 0D. Modal: Edit Pre-Wedding Video */}
+      {editingVideo && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-neutral-200 p-6 sm:p-8 rounded-sm shadow-2xl max-w-xl w-full space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+              <div>
+                <span className="text-[10px] tracking-wider uppercase text-neutral-400 font-medium">
+                  EDIT PRE-WEDDING FILM
+                </span>
+                <h3 className="font-serif text-xl text-neutral-900 font-normal">
+                  {editingVideo.title}
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingVideo(null)}
+                className="text-neutral-400 hover:text-neutral-700 p-1 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Film / Video Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={editingVideo.title}
+                    onChange={(e) =>
+                      setEditingVideo({ ...editingVideo, title: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Couple Names
+                  </label>
+                  <input
+                    type="text"
+                    value={editingVideo.coupleNames || ''}
+                    onChange={(e) =>
+                      setEditingVideo({ ...editingVideo, coupleNames: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    value={editingVideo.location || ''}
+                    onChange={(e) =>
+                      setEditingVideo({ ...editingVideo, location: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Display Order
+                  </label>
+                  <input
+                    type="number"
+                    value={editingVideo.displayOrder ?? 0}
+                    onChange={(e) =>
+                      setEditingVideo({ ...editingVideo, displayOrder: parseInt(e.target.value, 10) || 0 })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                  Description / Cinematic Notes
+                </label>
+                <textarea
+                  rows={2}
+                  value={editingVideo.description || ''}
+                  onChange={(e) =>
+                    setEditingVideo({ ...editingVideo, description: e.target.value })
+                  }
+                  className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                />
+              </div>
+
+              {/* Video URL Upload */}
+              <CloudinaryVideoUpload
+                label="Pre-Wedding Video File *"
+                currentUrl={editingVideo.videoUrl}
+                onUploaded={(url) => setEditingVideo({ ...editingVideo, videoUrl: url })}
+                helperText="Upload MP4 or MOV film file"
+              />
+
+              {/* Poster Frame Upload */}
+              <CloudinaryImageUpload
+                label="Video Poster Frame (Cover Image Thumbnail)"
+                folder="images"
+                currentUrl={editingVideo.posterUrl || ''}
+                onUploaded={(url) => setEditingVideo({ ...editingVideo, posterUrl: url })}
+              />
+
+              {/* Featured Checkbox */}
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="edit-video-featured"
+                  checked={editingVideo.isFeatured || false}
+                  onChange={(e) => setEditingVideo({ ...editingVideo, isFeatured: e.target.checked })}
+                  className="rounded-xs text-neutral-900 focus:ring-neutral-900"
+                />
+                <label htmlFor="edit-video-featured" className="text-xs text-neutral-700 cursor-pointer select-none">
+                  Highlight as Featured Film in Portfolio &amp; Homepage
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-neutral-100">
+              <button
+                onClick={() => setEditingVideo(null)}
+                className="px-4 py-2 border border-neutral-300 text-neutral-700 text-xs uppercase tracking-wider rounded-xs hover:bg-neutral-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!editingVideo.title || !editingVideo.videoUrl) {
+                    alert('Please provide title and video URL.');
+                    return;
+                  }
+                  await updatePreWeddingVideo(editingVideo);
+                  setEditingVideo(null);
+                  showToast('Pre-wedding video updated.');
                 }}
                 className="px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs uppercase tracking-wider rounded-xs cursor-pointer font-medium"
               >
