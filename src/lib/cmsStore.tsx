@@ -11,8 +11,12 @@ import {
   EnquiryItem,
   WeddingProject,
   AboutPageImages,
+  BookingItem,
+  BookingFormData,
+  BookingStatus,
 } from '../types';
 import { supabase } from './supabase';
+import { sendBookingToGoogleSheet } from './googleSheets';
 
 interface CMSContextType {
   studioInfo: StudioInfo;
@@ -26,6 +30,7 @@ interface CMSContextType {
   videoFeature: VideoFeature;
   aboutImages: AboutPageImages;
   enquiries: EnquiryItem[];
+  bookings: BookingItem[];
   loading: boolean;
   isSupabaseConnected: boolean;
 
@@ -69,6 +74,12 @@ interface CMSContextType {
   addEnquiry: (enquiry: Omit<EnquiryItem, 'id' | 'createdAt'>) => Promise<void>;
   markEnquiryRead: (id: string) => Promise<void>;
   deleteEnquiry: (id: string) => Promise<void>;
+
+  // Bookings
+  addBooking: (bookingData: BookingFormData) => Promise<BookingItem>;
+  updateBooking: (id: string, updates: Partial<BookingItem>) => Promise<void>;
+  updateBookingStatus: (id: string, status: BookingStatus) => Promise<void>;
+  deleteBooking: (id: string) => Promise<void>;
 
   // Reload data from DB
   reloadData: () => Promise<void>;
@@ -145,6 +156,7 @@ const normalizeEnquiry = (row: any): EnquiryItem => ({
   id: String(row.id),
   name: row.name || '',
   email: row.email || '',
+  phone: row.phone || '',
   eventDate: row.eventDate || row.eventdate,
   eventLocation: row.eventLocation || row.eventlocation,
   coverageType: row.coverageType || row.coveragetype,
@@ -154,11 +166,25 @@ const normalizeEnquiry = (row: any): EnquiryItem => ({
   isRead: Boolean(row.isRead ?? row.isread ?? false),
 });
 
+const normalizeBooking = (row: any): BookingItem => ({
+  id: String(row.id),
+  name: row.name || '',
+  package: row.package || '',
+  email: row.email || '',
+  phone: row.phone || '',
+  eventDate: row.event_date || row.eventDate || row.eventdate || '',
+  eventLocation: row.event_location || row.eventLocation || row.eventlocation || '',
+  remarks: row.remarks || '',
+  status: (row.status as BookingStatus) || 'pending',
+  createdAt: row.created_at || row.createdAt || row.createdat || new Date().toISOString(),
+});
+
 const CMSContext = createContext<CMSContextType | null>(null);
 
 export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isSupabaseConnected, setIsSupabaseConnected] = useState(false);
+
 
   // States initialized from local cache or empty defaults (no hardcoded data)
   const [studioInfo, setStudioInfo] = useState<StudioInfo>(() =>
@@ -211,6 +237,9 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
   const [enquiries, setEnquiries] = useState<EnquiryItem[]>(() =>
     getLocal('enquiries', []).map(normalizeEnquiry)
+  );
+  const [bookings, setBookings] = useState<BookingItem[]>(() =>
+    getLocal('bookings', []).map(normalizeBooking)
   );
 
   // Fetch ALL data exclusively from Supabase database
@@ -354,6 +383,43 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch (err) {
         console.warn('[CMS] enquiries fetch exception:', err);
       }
+
+      // 9. Fetch bookings
+      try {
+        let bookData: any = null;
+        let bookError: any = null;
+
+        const resBook = await supabase
+          .from('bookings')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (resBook.error) {
+          const fallbackRes = await supabase
+            .from('bookings')
+            .select('*')
+            .order('id', { ascending: false });
+          if (fallbackRes.error) {
+            const plainRes = await supabase.from('bookings').select('*');
+            bookData = plainRes.data;
+            bookError = plainRes.error;
+          } else {
+            bookData = fallbackRes.data;
+          }
+        } else {
+          bookData = resBook.data;
+        }
+
+        if (bookError) {
+          console.warn('[CMS] bookings fetch error:', bookError.message);
+        } else if (bookData) {
+          const normalized = bookData.map(normalizeBooking);
+          setBookings(normalized);
+          setLocal('bookings', normalized);
+        }
+      } catch (err) {
+        console.warn('[CMS] bookings fetch exception:', err);
+      }
     } catch (err) {
       console.warn('[CMS] Supabase load error:', err);
     } finally {
@@ -388,6 +454,7 @@ const toDbEnquiry = (item: Partial<EnquiryItem>) => {
   if (item.id !== undefined) res.id = String(item.id);
   if (item.name !== undefined) res.name = item.name;
   if (item.email !== undefined) res.email = item.email;
+  if (item.phone !== undefined) res.phone = item.phone;
   if (item.eventDate !== undefined) res.eventdate = item.eventDate;
   if (item.eventLocation !== undefined) res.eventlocation = item.eventLocation;
   if (item.coverageType !== undefined) res.coveragetype = item.coverageType;
@@ -395,6 +462,21 @@ const toDbEnquiry = (item: Partial<EnquiryItem>) => {
   if (item.referralSource !== undefined) res.referralsource = item.referralSource;
   if (item.createdAt !== undefined) res.createdat = item.createdAt;
   if (item.isRead !== undefined) res.isread = Boolean(item.isRead);
+  return res;
+};
+
+const toDbBooking = (item: Partial<BookingItem>) => {
+  const res: Record<string, any> = {};
+  if (item.id !== undefined) res.id = item.id;
+  if (item.name !== undefined) res.name = item.name;
+  if (item.package !== undefined) res.package = item.package;
+  if (item.email !== undefined) res.email = item.email;
+  if (item.phone !== undefined) res.phone = item.phone;
+  if (item.eventDate !== undefined) res.event_date = item.eventDate;
+  if (item.eventLocation !== undefined) res.event_location = item.eventLocation;
+  if (item.remarks !== undefined) res.remarks = item.remarks;
+  if (item.status !== undefined) res.status = item.status;
+  if (item.createdAt !== undefined) res.created_at = item.createdAt;
   return res;
 };
 
@@ -424,7 +506,7 @@ const toDbEnquiry = (item: Partial<EnquiryItem>) => {
             if (action === 'insert') pRes = await supabase.from(table).insert(portfolioMapped);
             else if (action === 'upsert') pRes = await supabase.from(table).upsert(portfolioMapped);
             else if (action === 'update') pRes = await supabase.from(table).update(portfolioMapped).eq(matchKey || 'id', matchVal);
-            if (!pRes?.error) return;
+            if (!pRes?.error) return { error: null };
           }
 
           const lowercased: Record<string, any> = {};
@@ -438,13 +520,17 @@ const toDbEnquiry = (item: Partial<EnquiryItem>) => {
 
           if (retryRes?.error) {
             console.error(`[Supabase] ${table} ${action} retry error:`, retryRes.error.message);
+            return { error: retryRes.error };
           }
-          return;
+          return { error: null };
         }
         console.error(`[Supabase] ${table} ${action} error:`, res.error.message);
+        return { error: res.error };
       }
-    } catch (e) {
+      return { error: null };
+    } catch (e: any) {
       console.warn(`[Supabase] ${table} ${action} exception:`, e);
+      return { error: e };
     }
   };
 
@@ -624,6 +710,71 @@ const toDbEnquiry = (item: Partial<EnquiryItem>) => {
     await safeSupabaseWrite('enquiries', 'delete', undefined, 'id', id);
   };
 
+  // Bookings CRUD
+  const addBooking = async (bookingData: BookingFormData): Promise<BookingItem> => {
+    // Generate UUID v4 for Supabase id
+    const newId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+
+    const newBooking: BookingItem = {
+      ...bookingData,
+      id: newId,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+
+    const updated = [newBooking, ...bookings];
+    setBookings(updated);
+    setLocal('bookings', updated);
+
+    const writeRes = await safeSupabaseWrite('bookings', 'insert', toDbBooking(newBooking));
+    if (writeRes?.error) {
+      console.error('[CMS] Failed to save booking to Supabase database:', writeRes.error);
+      throw new Error(writeRes.error.message || 'Database error: Could not save booking.');
+    }
+
+    // Fire and forget send to Google Sheets Webhook if configured
+    sendBookingToGoogleSheet(newBooking).catch((err) => {
+      console.warn('[CMS] Google Sheets webhook dispatch warning:', err);
+    });
+
+    return newBooking;
+  };
+
+  const updateBooking = async (id: string, updates: Partial<BookingItem>) => {
+    const updated = bookings.map((b) => (b.id === id ? { ...b, ...updates } : b));
+    setBookings(updated);
+    setLocal('bookings', updated);
+    await safeSupabaseWrite('bookings', 'update', toDbBooking(updates), 'id', id);
+  };
+
+  const updateBookingStatus = async (id: string, status: BookingStatus) => {
+    const updated = bookings.map((b) => (b.id === id ? { ...b, status } : b));
+    setBookings(updated);
+    setLocal('bookings', updated);
+    await safeSupabaseWrite('bookings', 'update', { status }, 'id', id);
+
+    // Sync updated status to Google Sheet
+    const targetBooking = updated.find((b) => b.id === id);
+    if (targetBooking) {
+      sendBookingToGoogleSheet(targetBooking).catch((err) => {
+        console.warn('[CMS] Google Sheets status sync warning:', err);
+      });
+    }
+  };
+
+  const deleteBooking = async (id: string) => {
+    const updated = bookings.filter((b) => b.id !== id);
+    setBookings(updated);
+    setLocal('bookings', updated);
+    await safeSupabaseWrite('bookings', 'delete', undefined, 'id', id);
+  };
+
   const resetToDefaults = () => {
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'studio_info');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'hero_slides');
@@ -636,6 +787,7 @@ const toDbEnquiry = (item: Partial<EnquiryItem>) => {
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'about_images');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'wedding_projects');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'enquiries');
+    localStorage.removeItem(STORAGE_KEY_PREFIX + 'bookings');
     fetchAllFromDB();
   };
 
@@ -682,6 +834,7 @@ const toDbEnquiry = (item: Partial<EnquiryItem>) => {
         videoFeature,
         aboutImages,
         enquiries,
+        bookings,
         loading,
         isSupabaseConnected,
         updateStudioInfo,
@@ -709,6 +862,10 @@ const toDbEnquiry = (item: Partial<EnquiryItem>) => {
         addEnquiry,
         markEnquiryRead,
         deleteEnquiry,
+        addBooking,
+        updateBooking,
+        updateBookingStatus,
+        deleteBooking,
         reloadData: fetchAllFromDB,
         resetToDefaults,
       }}

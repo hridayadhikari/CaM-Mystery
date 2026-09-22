@@ -162,7 +162,7 @@ function MainApp() {
               <PricingView onNavigate={handleNavigate} />
             )}
             {currentPage === 'CONTACT' && (
-              <ContactView initialPackage={selectedPackage} />
+              <ContactView />
             )}
             {currentPage === 'ADMIN' && (
               <AdminView onNavigate={handleNavigate} />

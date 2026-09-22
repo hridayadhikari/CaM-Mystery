@@ -1,67 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ChevronDown, CheckCircle2 } from 'lucide-react';
 import { ScrollReveal } from '../components/ScrollReveal';
 import { useCMS } from '../lib/cmsStore';
 
-interface ContactViewProps {
-  initialPackage?: string;
-}
-
-export const ContactView: React.FC<ContactViewProps> = ({ initialPackage }) => {
-  const { studioInfo, pricingPackages, addEnquiry } = useCMS();
-
-  // Dynamic coverage options generated from CMS pricing packages + standard options
-  const cmsPackageOptions = pricingPackages.map((pkg) =>
-    pkg.coverage ? `${pkg.name} (${pkg.coverage})` : pkg.name
-  );
-
-  const fallbackOptions = [
-    'Pre-Wedding Shoot Only',
-    'Cinematic Film Only',
-    'Custom Package',
-  ];
-
-  const allCoverageOptions = Array.from(
-    new Set([
-      ...cmsPackageOptions,
-      ...pricingPackages.map((pkg) => pkg.name),
-      ...fallbackOptions,
-    ])
-  );
-
-  const coverageOptions = ['Choose an option', ...allCoverageOptions];
-
-  const findMatchingCoverage = (pkgName?: string) => {
-    if (!pkgName) return '';
-    const cleanPkg = pkgName.trim().toLowerCase();
-    const direct = allCoverageOptions.find((opt) => opt.toLowerCase() === cleanPkg);
-    if (direct) return direct;
-    const partial = allCoverageOptions.find(
-      (opt) => opt.toLowerCase().includes(cleanPkg) || cleanPkg.includes(opt.toLowerCase())
-    );
-    if (partial) return partial;
-    return pkgName;
-  };
+export const ContactView: React.FC = () => {
+  const { studioInfo, addEnquiry } = useCMS();
 
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     eventDate: '',
     eventLocation: '',
-    coverageType: findMatchingCoverage(initialPackage),
     message: '',
     referralSource: '',
   });
-
-  // Automatically update selected package whenever initialPackage changes
-  useEffect(() => {
-    if (initialPackage) {
-      setFormData((prev) => ({
-        ...prev,
-        coverageType: findMatchingCoverage(initialPackage),
-      }));
-    }
-  }, [initialPackage, pricingPackages]);
 
   const [submitted, setSubmitted] = useState(false);
 
@@ -74,9 +27,9 @@ export const ContactView: React.FC<ContactViewProps> = ({ initialPackage }) => {
     await addEnquiry({
       name: formData.name,
       email: formData.email,
+      phone: formData.phone,
       eventDate: formData.eventDate,
       eventLocation: formData.eventLocation,
-      coverageType: formData.coverageType,
       message: formData.message,
       referralSource: formData.referralSource,
     });
@@ -129,9 +82,9 @@ export const ContactView: React.FC<ContactViewProps> = ({ initialPackage }) => {
                     setFormData({
                       name: '',
                       email: '',
+                      phone: '',
                       eventDate: '',
                       eventLocation: '',
-                      coverageType: '',
                       message: '',
                       referralSource: '',
                     });
@@ -162,22 +115,41 @@ export const ContactView: React.FC<ContactViewProps> = ({ initialPackage }) => {
                 />
               </div>
 
-              {/* Email */}
-              <div className="space-y-1">
-                <label
-                  htmlFor="contact-email"
-                  className="block text-xs text-neutral-600 font-sans"
-                >
-                  Email Address *
-                </label>
-                <input
-                  id="contact-email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full bg-transparent border-b border-neutral-300 focus:border-neutral-900 py-2 text-sm text-neutral-900 outline-none transition-colors"
-                />
+              {/* Email & Mobile (2 columns) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                <div className="space-y-1">
+                  <label
+                    htmlFor="contact-email"
+                    className="block text-xs text-neutral-600 font-sans"
+                  >
+                    Email Address *
+                  </label>
+                  <input
+                    id="contact-email"
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full bg-transparent border-b border-neutral-300 focus:border-neutral-900 py-2 text-sm text-neutral-900 outline-none transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label
+                    htmlFor="contact-phone"
+                    className="block text-xs text-neutral-600 font-sans"
+                  >
+                    Mobile Number
+                  </label>
+                  <input
+                    id="contact-phone"
+                    type="tel"
+                    placeholder="+91 98765 43210"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full bg-transparent border-b border-neutral-300 focus:border-neutral-900 py-2 text-sm text-neutral-900 outline-none transition-colors"
+                  />
+                </div>
               </div>
 
               {/* Event Date & Location (2 columns) */}
@@ -212,35 +184,6 @@ export const ContactView: React.FC<ContactViewProps> = ({ initialPackage }) => {
                     value={formData.eventLocation}
                     onChange={(e) => setFormData({ ...formData, eventLocation: e.target.value })}
                     className="w-full bg-transparent border-b border-neutral-300 focus:border-neutral-900 py-2 text-sm text-neutral-900 outline-none transition-colors"
-                  />
-                </div>
-              </div>
-
-              {/* Type of Coverage */}
-              <div className="space-y-1">
-                <label
-                  htmlFor="contact-coverage"
-                  className="block text-xs text-neutral-600 font-sans"
-                >
-                  Type of Coverage *
-                </label>
-                <div className="relative">
-                  <select
-                    id="contact-coverage"
-                    required
-                    value={formData.coverageType}
-                    onChange={(e) => setFormData({ ...formData, coverageType: e.target.value })}
-                    className="w-full appearance-none bg-transparent border-b border-neutral-300 focus:border-neutral-900 py-2 text-sm text-neutral-900 outline-none cursor-pointer"
-                  >
-                    {coverageOptions.map((opt, i) => (
-                      <option key={i} value={i === 0 ? '' : opt} disabled={i === 0}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    size={14}
-                    className="absolute right-2 top-3 pointer-events-none text-neutral-500"
                   />
                 </div>
               </div>

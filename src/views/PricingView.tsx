@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavPage } from '../types';
 import { Check } from 'lucide-react';
 import { ScrollReveal } from '../components/ScrollReveal';
 import { useCMS } from '../lib/cmsStore';
+import { BookingModal } from '../components/BookingModal';
 
 interface PricingViewProps {
   onNavigate: (page: NavPage, selectedPackage?: string) => void;
@@ -10,6 +11,8 @@ interface PricingViewProps {
 
 export const PricingView: React.FC<PricingViewProps> = ({ onNavigate }) => {
   const { pricingPackages } = useCMS();
+  const [bookingModalPackage, setBookingModalPackage] = useState<string | null>(null);
+
   return (
     <div className="w-full">
       {/* 1. Header Section */}
@@ -38,25 +41,24 @@ export const PricingView: React.FC<PricingViewProps> = ({ onNavigate }) => {
                 key={pkg.id}
                 delay={idx * 0.1}
                 distance={18}
-                duration={0.65}
                 className="flex"
               >
                 <div
-                  className={`relative w-full bg-white flex flex-col justify-between p-8 sm:p-10 transition-all ${
+                  className={`w-full flex flex-col justify-between p-8 sm:p-10 border transition-all duration-300 relative bg-white text-neutral-900 ${
                     isPopular
-                      ? 'border-2 border-neutral-900 shadow-xl'
-                      : 'border border-neutral-200'
+                      ? 'border-2 border-neutral-900 shadow-lg'
+                      : 'border-neutral-200 hover:border-neutral-400'
                   }`}
                 >
                   {/* Popular Badge */}
                   {pkg.badge && (
-                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-neutral-950 text-white text-[10px] tracking-[0.22em] font-medium uppercase px-4 py-1">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-neutral-900 text-white text-[9px] tracking-[0.2em] uppercase font-bold py-1 px-3 rounded-xs">
                       {pkg.badge}
                     </div>
                   )}
 
-                  {/* Top: Title, Duration & Price */}
                   <div>
+                    {/* Header */}
                     <div className="text-center pb-8 border-b border-neutral-100">
                       <h3 className="text-xs tracking-[0.25em] uppercase text-neutral-800 font-medium">
                         {pkg.name}
@@ -84,7 +86,7 @@ export const PricingView: React.FC<PricingViewProps> = ({ onNavigate }) => {
                   <div className="pt-6 border-t border-neutral-100 text-center">
                     <button
                       id={`book-package-${pkg.id}`}
-                      onClick={() => onNavigate('CONTACT', pkg.name)}
+                      onClick={() => setBookingModalPackage(pkg.name)}
                       className="inline-flex items-center text-[10px] sm:text-xs tracking-[0.12em] sm:tracking-[0.22em] uppercase font-medium text-neutral-900 border-b border-neutral-900 pb-1 hover:text-neutral-600 hover:border-neutral-400 transition-colors cursor-pointer whitespace-nowrap"
                     >
                       <span>BOOK {pkg.name}</span>
@@ -115,6 +117,13 @@ export const PricingView: React.FC<PricingViewProps> = ({ onNavigate }) => {
           </div>
         </ScrollReveal>
       </section>
+
+      {/* Booking Form Modal */}
+      <BookingModal
+        isOpen={Boolean(bookingModalPackage)}
+        packageName={bookingModalPackage || ''}
+        onClose={() => setBookingModalPackage(null)}
+      />
     </div>
   );
 };

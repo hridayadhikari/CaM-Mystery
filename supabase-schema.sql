@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS public.enquiries (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     email TEXT NOT NULL,
+    phone TEXT,
     eventDate TEXT,
     eventLocation TEXT,
     coverageType TEXT,
@@ -78,6 +79,20 @@ CREATE TABLE IF NOT EXISTS public.enquiries (
     referralSource TEXT,
     isRead BOOLEAN DEFAULT false,
     createdAt TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 8. BOOKINGS TABLE
+CREATE TABLE IF NOT EXISTS public.bookings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    package TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    event_date DATE NOT NULL,
+    event_location TEXT NOT NULL,
+    remarks TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- ==============================================================================
@@ -92,6 +107,7 @@ ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.faqs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.enquiries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
 
 -- Clean up existing policies if any
 DROP POLICY IF EXISTS "Public can read site_settings" ON public.site_settings;
@@ -128,6 +144,11 @@ DROP POLICY IF EXISTS "Public can read enquiries" ON public.enquiries;
 DROP POLICY IF EXISTS "Public can manage enquiries" ON public.enquiries;
 CREATE POLICY "Public can read enquiries" ON public.enquiries FOR SELECT USING (true);
 CREATE POLICY "Public can manage enquiries" ON public.enquiries FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can read bookings" ON public.bookings;
+DROP POLICY IF EXISTS "Public can manage bookings" ON public.bookings;
+CREATE POLICY "Public can read bookings" ON public.bookings FOR SELECT USING (true);
+CREATE POLICY "Public can manage bookings" ON public.bookings FOR ALL USING (true) WITH CHECK (true);
 
 
 -- ==============================================================================

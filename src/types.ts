@@ -90,6 +90,7 @@ export interface EnquiryItem {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   eventDate?: string;
   eventLocation?: string;
   coverageType?: string;
@@ -99,12 +100,28 @@ export interface EnquiryItem {
   isRead?: boolean;
 }
 
-export interface EnquiryFormData {
+export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
+
+export interface BookingItem {
+  id: string;
   name: string;
+  package: string;
   email: string;
+  phone: string;
   eventDate: string;
   eventLocation: string;
-  coverageType: string;
-  message: string;
-  referralSource: string;
+  remarks?: string;
+  status: BookingStatus;
+  createdAt: string;
 }
+
+export interface BookingFormData {
+  name: string;
+  package: string;
+  email: string;
+  phone: string;
+  eventDate: string;
+  eventLocation: string;
+  remarks?: string;
+}
+
