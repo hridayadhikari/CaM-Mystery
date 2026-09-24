@@ -78,7 +78,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
       {/* 2. Intro Philosophy Statement */}
       <section className="py-24 sm:py-32 px-6 sm:px-12 bg-white">
         <ScrollReveal distance={18} duration={0.7} className="max-w-3xl mx-auto text-center">
-          <p className="font-serif text-xl sm:text-2xl md:text-3xl text-neutral-800 leading-relaxed font-normal tracking-wide">
+          <p
+            className="font-serif text-xl sm:text-2xl md:text-3xl text-neutral-800 text-center"
+            style={{
+              textAlign: 'center',
+              letterSpacing: '0.01em',
+              wordSpacing: 'normal',
+              lineHeight: 1.65,
+              fontWeight: 450,
+            }}
+          >
             At CaM-Mystery, we believe every wedding is a story waiting to be told.
             Through timeless photography and cinematic films, we capture genuine
             emotions, meaningful traditions, and the moments that make your
