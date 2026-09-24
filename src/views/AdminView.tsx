@@ -39,11 +39,13 @@ import {
   Testimonial,
   FaqItem,
   WeddingProject,
+  PreWeddingStory,
   BookingItem,
   BookingStatus,
   PreWeddingVideo,
 } from '../types';
 import { CloudinaryImageUpload } from '../components/admin/CloudinaryImageUpload';
+import { BatchImageUpload } from '../components/admin/BatchImageUpload';
 import { CloudinaryVideoUpload } from '../components/admin/CloudinaryVideoUpload';
 import { ConfirmModal } from '../components/admin/ConfirmModal';
 import { getOptimizedCloudinaryUrl } from '../lib/cloudinary';
@@ -71,6 +73,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     heroSlides,
     selectedWork,
     weddingProjects,
+    preWeddingStories,
     pricingPackages,
     teamMembers,
     testimonials,
@@ -90,6 +93,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     addWeddingProject,
     updateWeddingProject,
     deleteWeddingProject,
+    addPreWeddingStory,
+    updatePreWeddingStory,
+    deletePreWeddingStory,
     addSelectedWork,
     updateSelectedWork,
     deleteSelectedWork,
@@ -154,7 +160,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     };
   }, []);
 
-  // Portfolio Subtab: 'single' (individual photos) vs 'projects' (full wedding stories) vs 'videos' (pre-wedding films)
+  // Portfolio Subtab: 'single' (pre-wedding stories) vs 'projects' (full wedding stories) vs 'videos' (pre-wedding films)
   const [portfolioSubTab, setPortfolioSubTab] = useState<'single' | 'projects' | 'videos'>('single');
 
   // Pre-Wedding Video Form Modals
@@ -181,8 +187,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     coverImage: '',
     description: '',
     images: [],
+    featuredImages: [],
   });
   const [editingProject, setEditingProject] = useState<WeddingProject | null>(null);
+
+  // Pre-Wedding Story Form Modals
+  const [newPreWeddingStoryModal, setNewPreWeddingStoryModal] = useState(false);
+  const [newPreWeddingStoryForm, setNewPreWeddingStoryForm] = useState<Omit<PreWeddingStory, 'id'>>({
+    title: '',
+    coupleNames: '',
+    location: '',
+    date: '',
+    coverImage: '',
+    description: '',
+    images: [],
+    featuredImages: [],
+  });
+  const [editingPreWeddingStory, setEditingPreWeddingStory] = useState<PreWeddingStory | null>(null);
   const [isSyncingSheet, setIsSyncingSheet] = useState(false);
 
   // Success toast feedback
@@ -345,6 +366,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
 
   // Lock background scrolling whenever any modal is open
   const isAnyModalOpen = Boolean(
+    newPreWeddingStoryModal ||
+    editingPreWeddingStory ||
     newProjectModal ||
     editingProject ||
     newWorkModal ||
@@ -692,18 +715,29 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                       Portfolio &amp; Wedding Stories
                     </h2>
                     <p className="text-xs text-neutral-500">
-                      Manage single categorized portfolio photos or organize full wedding projects with multiple couple ceremony images.
+                      Manage pre-wedding stories or organize full wedding projects with multiple ceremony images.
                     </p>
                   </div>
 
                   <div className="flex items-center gap-2">
                     {portfolioSubTab === 'single' ? (
                       <button
-                        onClick={() => setNewWorkModal(true)}
+                        onClick={() => {
+                          setNewPreWeddingStoryForm({
+                            title: '',
+                            coupleNames: '',
+                            location: '',
+                            date: '',
+                            coverImage: '',
+                            description: '',
+                            images: [],
+                          });
+                          setNewPreWeddingStoryModal(true);
+                        }}
                         className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs uppercase tracking-wider rounded-xs cursor-pointer transition-colors"
                       >
                         <Plus size={14} />
-                        <span>Upload Single Photo</span>
+                        <span>Add Pre-Wedding Story</span>
                       </button>
                     ) : portfolioSubTab === 'projects' ? (
                       <button
@@ -759,9 +793,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                         : 'border-transparent text-neutral-400 hover:text-neutral-700'
                     }`}
                   >
-                    <span>Individual Photos</span>
+                    <span>Pre-Wedding Stories</span>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
-                      {selectedWork.length}
+                      {preWeddingStories.length}
                     </span>
                   </button>
 
@@ -796,91 +830,108 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                   </button>
                 </div>
 
-                {/* View 1: Individual Photos Grid */}
+                {/* View 1: Pre-Wedding Stories Grid */}
                 {portfolioSubTab === 'single' && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {selectedWork.map((item) => (
-                      <div
-                        key={item.id}
-                        className="bg-white border border-neutral-200 rounded-xs overflow-hidden shadow-xs group relative flex flex-col"
-                      >
-                        <div className="aspect-[4/5] bg-neutral-100 relative overflow-hidden">
-                          <img
-                            src={getOptimizedCloudinaryUrl(item.imageUrl, { width: 400 })}
-                            alt={item.title}
-                            loading="lazy"
-                            decoding="async"
-                            className="w-full h-full object-cover object-top"
-                          />
-                          {item.isFeatured && (
-                            <div className="absolute top-2 left-2 bg-neutral-900/90 text-amber-400 px-2 py-0.5 text-[9px] uppercase tracking-wider font-semibold rounded-xs flex items-center gap-1 shadow-xs">
-                              <Star size={10} className="fill-amber-400 text-amber-400" />
-                              <span>Featured</span>
-                            </div>
-                          )}
-                          <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={async () => {
-                                const nextFeatured = !item.isFeatured;
-                                await updateSelectedWork({ ...item, isFeatured: nextFeatured });
-                                showToast(
-                                  nextFeatured
-                                    ? 'Marked as featured on homepage.'
-                                    : 'Removed from homepage featured list.'
-                                );
-                              }}
-                              className={`p-1.5 rounded-xs shadow-xs cursor-pointer transition-colors ${
-                                item.isFeatured
-                                  ? 'bg-amber-400 text-neutral-950 hover:bg-amber-300'
-                                  : 'bg-white/90 hover:bg-white text-neutral-700'
-                              }`}
-                              title={item.isFeatured ? 'Unfeature from Homepage' : 'Feature on Homepage'}
-                            >
-                              <Star size={13} className={item.isFeatured ? 'fill-neutral-950' : ''} />
-                            </button>
-                            <button
-                              onClick={() => setEditingWork(item)}
-                              className="p-1.5 bg-white/90 hover:bg-white text-neutral-900 rounded-xs shadow-xs cursor-pointer"
-                              title="Edit"
-                            >
-                              <Edit2 size={13} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                requestDeleteConfirm(
-                                  'Delete Photo',
-                                  `Are you sure you want to permanently remove "${item.title}" from the portfolio gallery?`,
-                                  async () => {
-                                    await deleteSelectedWork(item.id);
-                                    showToast('Photo removed.');
-                                  }
-                                );
-                              }}
-                              className="p-1.5 bg-white/90 hover:bg-rose-600 hover:text-white text-rose-600 rounded-xs shadow-xs cursor-pointer"
-                              title="Delete"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </div>
-                        <div className="p-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] tracking-wider uppercase text-neutral-400 font-medium">
-                              {item.category}
-                            </span>
-                            {item.isFeatured && (
-                              <span className="text-[9px] text-amber-600 font-medium flex items-center gap-0.5">
-                                <Star size={9} className="fill-amber-500 text-amber-500" />
-                                Home
-                              </span>
-                            )}
-                          </div>
-                          <h4 className="font-serif text-sm text-neutral-900 truncate mt-0.5">
-                            {item.title}
-                          </h4>
-                        </div>
+                  <div className="space-y-4">
+                    {preWeddingStories.length === 0 ? (
+                      <div className="bg-white border border-neutral-200 p-12 text-center rounded-xs space-y-3">
+                        <p className="text-sm text-neutral-500">
+                          No pre-wedding stories created yet.
+                        </p>
+                        <button
+                          onClick={() => {
+                            setNewPreWeddingStoryForm({
+                              title: '',
+                              coupleNames: '',
+                              location: '',
+                              date: '',
+                              coverImage: '',
+                              description: '',
+                              images: [],
+                            });
+                            setNewPreWeddingStoryModal(true);
+                          }}
+                          className="px-4 py-2 bg-neutral-900 text-white text-xs uppercase tracking-wider rounded-xs cursor-pointer"
+                        >
+                          Create First Pre-Wedding Story
+                        </button>
                       </div>
-                    ))}
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {preWeddingStories.map((story) => (
+                          <div
+                            key={story.id}
+                            className="bg-white border border-neutral-200 rounded-xs overflow-hidden shadow-xs flex flex-col justify-between"
+                          >
+                            <div>
+                              <div className="aspect-[16/10] bg-neutral-900 relative overflow-hidden group">
+                                <img
+                                  src={getOptimizedCloudinaryUrl(story.coverImage, { width: 600 })}
+                                  alt={story.coupleNames}
+                                  loading="lazy"
+                                  decoding="async"
+                                  className="w-full h-full object-cover object-top"
+                                />
+                                <div className="absolute top-2 right-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded-xs flex items-center gap-1">
+                                  <span>{story.images?.length || 0} Photos</span>
+                                </div>
+                              </div>
+
+                              <div className="p-4 space-y-2">
+                                <span className="text-[10px] tracking-wider uppercase text-neutral-400 block font-medium">
+                                  {story.coupleNames}
+                                </span>
+                                <h3 className="font-serif text-base text-neutral-900 font-medium">
+                                  {story.title}
+                                </h3>
+                                <div className="text-xs text-neutral-500 space-y-0.5">
+                                  {story.location && <p>📍 {story.location}</p>}
+                                  {story.date && <p>📅 {story.date}</p>}
+                                </div>
+                                {story.description && (
+                                  <p className="text-xs text-neutral-600 line-clamp-2 pt-1 font-sans">
+                                    {story.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="p-4 pt-2 border-t border-neutral-100 flex items-center justify-between gap-2">
+                              <span className="text-[11px] text-neutral-400 font-mono">
+                                ID: {story.id}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setEditingPreWeddingStory({ ...story })}
+                                  className="p-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xs text-xs flex items-center gap-1 cursor-pointer"
+                                  title="Edit Pre-Wedding Story"
+                                >
+                                  <Edit2 size={13} />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    requestDeleteConfirm(
+                                      'Delete Pre-Wedding Story',
+                                      `Permanently delete "${story.coupleNames}" pre-wedding story and all associated photos?`,
+                                      async () => {
+                                        await deletePreWeddingStory(story.id);
+                                        showToast('Pre-wedding story removed.');
+                                      }
+                                    );
+                                  }}
+                                  className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xs text-xs flex items-center gap-1 cursor-pointer"
+                                  title="Delete Pre-Wedding Story"
+                                >
+                                  <Trash2 size={13} />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -2560,48 +2611,90 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                   </span>
                 </div>
 
-                <CloudinaryImageUpload
-                  label="Upload Additional Wedding Photo"
+                {/* Batch Multiple Photos Upload */}
+                <BatchImageUpload
+                  label="Upload Multiple Photos at Once"
+                  helperText="Select several ceremony or portrait photos (Ctrl/Cmd + click) to upload simultaneously."
                   folder="images"
-                  currentUrl=""
-                  onUploaded={(url) => {
-                    if (url) {
-                      setNewProjectForm((prev) => ({
-                        ...prev,
-                        images: [...prev.images, url],
-                      }));
-                      showToast('Photo added to project gallery.');
-                    }
+                  onPhotosUploaded={(urls) => {
+                    setNewProjectForm((prev) => ({
+                      ...prev,
+                      images: [...prev.images, ...urls],
+                    }));
+                    showToast(`${urls.length} photos added to project gallery.`);
                   }}
                 />
+
+                <div className="pt-1">
+                  <CloudinaryImageUpload
+                    label="Or Upload Single Photo"
+                    folder="images"
+                    currentUrl=""
+                    onUploaded={(url) => {
+                      if (url) {
+                        setNewProjectForm((prev) => ({
+                          ...prev,
+                          images: [...prev.images, url],
+                        }));
+                        showToast('Photo added to project gallery.');
+                      }
+                    }}
+                  />
+                </div>
 
                 {/* Thumbnail strip of added images */}
                 {newProjectForm.images.length > 0 && (
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 pt-2">
-                    {newProjectForm.images.map((imgUrl, idx) => (
-                      <div key={idx} className="relative aspect-square bg-neutral-100 rounded-xs overflow-hidden group">
-                        <img
-                          src={getOptimizedCloudinaryUrl(imgUrl, { width: 200 })}
-                          alt={`Photo ${idx + 1}`}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-cover object-top"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNewProjectForm((prev) => ({
-                              ...prev,
-                              images: prev.images.filter((_, i) => i !== idx),
-                            }));
-                          }}
-                          className="absolute top-1 right-1 bg-black/70 hover:bg-rose-600 text-white p-1 rounded-full text-xs transition-colors cursor-pointer"
-                          title="Remove Photo"
-                        >
-                          <X size={10} />
-                        </button>
-                      </div>
-                    ))}
+                    {newProjectForm.images.map((imgUrl, idx) => {
+                      const isFeatured = newProjectForm.featuredImages?.includes(imgUrl);
+                      return (
+                        <div key={idx} className="relative aspect-square bg-neutral-100 rounded-xs overflow-hidden group">
+                          <img
+                            src={getOptimizedCloudinaryUrl(imgUrl, { width: 200 })}
+                            alt={`Photo ${idx + 1}`}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover object-top"
+                          />
+                          {/* Star toggle button for featuring on Homepage Selected Work */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentFeat = newProjectForm.featuredImages || [];
+                              const nextFeat = isFeatured
+                                ? currentFeat.filter((url) => url !== imgUrl)
+                                : [...currentFeat, imgUrl];
+                              setNewProjectForm((prev) => ({
+                                ...prev,
+                                featuredImages: nextFeat,
+                              }));
+                            }}
+                            className={`absolute top-1 left-1 p-1 rounded-full text-xs transition-colors cursor-pointer ${
+                              isFeatured
+                                ? 'bg-amber-400 text-neutral-950 shadow-xs'
+                                : 'bg-black/60 hover:bg-black/80 text-white/70 hover:text-white'
+                            }`}
+                            title={isFeatured ? 'Featured on Homepage Selected Work (Click to unfeature)' : 'Feature on Homepage Selected Work'}
+                          >
+                            <Star size={11} className={isFeatured ? 'fill-neutral-950' : ''} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewProjectForm((prev) => ({
+                                ...prev,
+                                images: prev.images.filter((_, i) => i !== idx),
+                                featuredImages: (prev.featuredImages || []).filter((url) => url !== imgUrl),
+                              }));
+                            }}
+                            className="absolute top-1 right-1 bg-black/70 hover:bg-rose-600 text-white p-1 rounded-full text-xs transition-colors cursor-pointer"
+                            title="Remove Photo"
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -2629,6 +2722,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                     coverImage: newProjectForm.coverImage,
                     description: newProjectForm.description,
                     images: newProjectForm.images.length > 0 ? newProjectForm.images : [newProjectForm.coverImage],
+                    featuredImages: newProjectForm.featuredImages || [],
                   };
                   await addWeddingProject(newProj);
                   setNewProjectModal(false);
@@ -2758,48 +2852,91 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                   </span>
                 </div>
 
-                <CloudinaryImageUpload
-                  label="Upload Additional Photo to Project"
+                {/* Batch Multiple Photos Upload */}
+                <BatchImageUpload
+                  label="Upload Multiple Photos at Once"
+                  helperText="Select several ceremony or portrait photos (Ctrl/Cmd + click) to upload simultaneously."
                   folder="images"
-                  currentUrl=""
-                  onUploaded={(url) => {
-                    if (url) {
-                      setEditingProject((prev) =>
-                        prev ? { ...prev, images: [...(prev.images || []), url] } : prev
-                      );
-                      showToast('Photo added to wedding gallery.');
-                    }
+                  onPhotosUploaded={(urls) => {
+                    setEditingProject((prev) =>
+                      prev ? { ...prev, images: [...(prev.images || []), ...urls] } : prev
+                    );
+                    showToast(`${urls.length} photos added to wedding gallery.`);
                   }}
                 />
+
+                <div className="pt-1">
+                  <CloudinaryImageUpload
+                    label="Or Upload Single Photo"
+                    folder="images"
+                    currentUrl=""
+                    onUploaded={(url) => {
+                      if (url) {
+                        setEditingProject((prev) =>
+                          prev ? { ...prev, images: [...(prev.images || []), url] } : prev
+                        );
+                        showToast('Photo added to wedding gallery.');
+                      }
+                    }}
+                  />
+                </div>
 
                 {/* Thumbnail strip of existing photos */}
                 {editingProject.images && editingProject.images.length > 0 && (
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 pt-2">
-                    {editingProject.images.map((imgUrl, idx) => (
-                      <div key={idx} className="relative aspect-square bg-neutral-100 rounded-xs overflow-hidden group">
-                        <img
-                          src={getOptimizedCloudinaryUrl(imgUrl, { width: 200 })}
-                          alt={`Photo ${idx + 1}`}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-cover object-top"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingProject((prev) =>
-                              prev
-                                ? { ...prev, images: prev.images.filter((_, i) => i !== idx) }
-                                : prev
-                            );
-                          }}
-                          className="absolute top-1 right-1 bg-black/70 hover:bg-rose-600 text-white p-1 rounded-full text-xs transition-colors cursor-pointer"
-                          title="Remove Photo"
-                        >
-                          <X size={10} />
-                        </button>
-                      </div>
-                    ))}
+                    {editingProject.images.map((imgUrl, idx) => {
+                      const isFeatured = editingProject.featuredImages?.includes(imgUrl);
+                      return (
+                        <div key={idx} className="relative aspect-square bg-neutral-100 rounded-xs overflow-hidden group">
+                          <img
+                            src={getOptimizedCloudinaryUrl(imgUrl, { width: 200 })}
+                            alt={`Photo ${idx + 1}`}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover object-top"
+                          />
+                          {/* Star toggle button for featuring on Homepage Selected Work */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentFeat = editingProject.featuredImages || [];
+                              const nextFeat = isFeatured
+                                ? currentFeat.filter((url) => url !== imgUrl)
+                                : [...currentFeat, imgUrl];
+                              setEditingProject((prev) =>
+                                prev ? { ...prev, featuredImages: nextFeat } : prev
+                              );
+                            }}
+                            className={`absolute top-1 left-1 p-1 rounded-full text-xs transition-colors cursor-pointer ${
+                              isFeatured
+                                ? 'bg-amber-400 text-neutral-950 shadow-xs'
+                                : 'bg-black/60 hover:bg-black/80 text-white/70 hover:text-white'
+                            }`}
+                            title={isFeatured ? 'Featured on Homepage Selected Work (Click to unfeature)' : 'Feature on Homepage Selected Work'}
+                          >
+                            <Star size={11} className={isFeatured ? 'fill-neutral-950' : ''} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingProject((prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      images: prev.images.filter((_, i) => i !== idx),
+                                      featuredImages: (prev.featuredImages || []).filter((url) => url !== imgUrl),
+                                    }
+                                  : prev
+                              );
+                            }}
+                            className="absolute top-1 right-1 bg-black/70 hover:bg-rose-600 text-white p-1 rounded-full text-xs transition-colors cursor-pointer"
+                            title="Remove Photo"
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -2821,6 +2958,483 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                   await updateWeddingProject(editingProject);
                   setEditingProject(null);
                   showToast('Wedding project updated.');
+                }}
+                className="px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs uppercase tracking-wider rounded-xs cursor-pointer font-medium"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 0C. Modal: Add New Pre-Wedding Story */}
+      {newPreWeddingStoryModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-neutral-200 p-6 sm:p-8 rounded-sm shadow-2xl max-w-2xl w-full space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+              <div>
+                <span className="text-[10px] tracking-wider uppercase text-neutral-400 font-medium">
+                  PRE-WEDDING STORIES
+                </span>
+                <h3 className="font-serif text-xl text-neutral-900 font-normal">
+                  Create New Pre-Wedding Story
+                </h3>
+              </div>
+              <button
+                onClick={() => setNewPreWeddingStoryModal(false)}
+                className="text-neutral-400 hover:text-neutral-700 p-1 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Couple Names *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Vikram & Radhika"
+                    value={newPreWeddingStoryForm.coupleNames}
+                    onChange={(e) =>
+                      setNewPreWeddingStoryForm({ ...newPreWeddingStoryForm, coupleNames: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Story Title *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Sunset Moments in Jaipur"
+                    value={newPreWeddingStoryForm.title}
+                    onChange={(e) =>
+                      setNewPreWeddingStoryForm({ ...newPreWeddingStoryForm, title: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Nahargarh Fort, Jaipur"
+                    value={newPreWeddingStoryForm.location || ''}
+                    onChange={(e) =>
+                      setNewPreWeddingStoryForm({ ...newPreWeddingStoryForm, location: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Date / Season
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. November 2025"
+                    value={newPreWeddingStoryForm.date || ''}
+                    onChange={(e) =>
+                      setNewPreWeddingStoryForm({ ...newPreWeddingStoryForm, date: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                  Story Description
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Share details about the shoot vibe, backdrop, concept, and special moments..."
+                  value={newPreWeddingStoryForm.description || ''}
+                  onChange={(e) =>
+                    setNewPreWeddingStoryForm({ ...newPreWeddingStoryForm, description: e.target.value })
+                  }
+                  className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                />
+              </div>
+
+              {/* Cover Photo Upload */}
+              <CloudinaryImageUpload
+                label="Main Story Cover Image *"
+                folder="images"
+                currentUrl={newPreWeddingStoryForm.coverImage}
+                onUploaded={(url) => setNewPreWeddingStoryForm({ ...newPreWeddingStoryForm, coverImage: url })}
+              />
+
+              {/* Multiple Gallery Photos for the Pre-Wedding Story */}
+              <div className="pt-3 border-t border-neutral-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs uppercase tracking-wider text-neutral-700 font-semibold">
+                    Story Photos ({newPreWeddingStoryForm.images.length})
+                  </label>
+                  <span className="text-[10px] text-neutral-400">
+                    Upload portrait sessions, cinematic angles, &amp; frames
+                  </span>
+                </div>
+
+                {/* Batch Multiple Photos Upload */}
+                <BatchImageUpload
+                  label="Upload Multiple Photos at Once"
+                  helperText="Select several pre-wedding photos (Ctrl/Cmd + click) to upload simultaneously."
+                  folder="images"
+                  onPhotosUploaded={(urls) => {
+                    setNewPreWeddingStoryForm((prev) => ({
+                      ...prev,
+                      images: [...prev.images, ...urls],
+                    }));
+                    showToast(`${urls.length} photos added to pre-wedding story.`);
+                  }}
+                />
+
+                <div className="pt-1">
+                  <CloudinaryImageUpload
+                    label="Or Upload Single Photo"
+                    folder="images"
+                    currentUrl=""
+                    onUploaded={(url) => {
+                      if (url) {
+                        setNewPreWeddingStoryForm((prev) => ({
+                          ...prev,
+                          images: [...prev.images, url],
+                        }));
+                        showToast('Photo added to pre-wedding story.');
+                      }
+                    }}
+                  />
+                </div>
+
+                {/* Thumbnail strip of added images */}
+                {newPreWeddingStoryForm.images.length > 0 && (
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 pt-2">
+                    {newPreWeddingStoryForm.images.map((imgUrl, idx) => {
+                      const isFeatured = newPreWeddingStoryForm.featuredImages?.includes(imgUrl);
+                      return (
+                        <div key={idx} className="relative aspect-square bg-neutral-100 rounded-xs overflow-hidden group">
+                          <img
+                            src={getOptimizedCloudinaryUrl(imgUrl, { width: 200 })}
+                            alt={`Photo ${idx + 1}`}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover object-top"
+                          />
+                          {/* Star toggle button for featuring on Homepage Selected Work */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentFeat = newPreWeddingStoryForm.featuredImages || [];
+                              const nextFeat = isFeatured
+                                ? currentFeat.filter((url) => url !== imgUrl)
+                                : [...currentFeat, imgUrl];
+                              setNewPreWeddingStoryForm((prev) => ({
+                                ...prev,
+                                featuredImages: nextFeat,
+                              }));
+                            }}
+                            className={`absolute top-1 left-1 p-1 rounded-full text-xs transition-colors cursor-pointer ${
+                              isFeatured
+                                ? 'bg-amber-400 text-neutral-950 shadow-xs'
+                                : 'bg-black/60 hover:bg-black/80 text-white/70 hover:text-white'
+                            }`}
+                            title={isFeatured ? 'Featured on Homepage Selected Work (Click to unfeature)' : 'Feature on Homepage Selected Work'}
+                          >
+                            <Star size={11} className={isFeatured ? 'fill-neutral-950' : ''} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewPreWeddingStoryForm((prev) => ({
+                                ...prev,
+                                images: prev.images.filter((_, i) => i !== idx),
+                                featuredImages: (prev.featuredImages || []).filter((url) => url !== imgUrl),
+                              }));
+                            }}
+                            className="absolute top-1 right-1 bg-black/70 hover:bg-rose-600 text-white p-1 rounded-full text-xs transition-colors cursor-pointer"
+                            title="Remove Photo"
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-neutral-100">
+              <button
+                onClick={() => setNewPreWeddingStoryModal(false)}
+                className="px-4 py-2 border border-neutral-300 text-neutral-700 text-xs uppercase tracking-wider rounded-xs hover:bg-neutral-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!newPreWeddingStoryForm.coupleNames || !newPreWeddingStoryForm.title || !newPreWeddingStoryForm.coverImage) {
+                    alert('Please provide couple names, story title, and a cover image.');
+                    return;
+                  }
+                  const newStory: PreWeddingStory = {
+                    id: `prewed-${Date.now()}`,
+                    title: newPreWeddingStoryForm.title,
+                    coupleNames: newPreWeddingStoryForm.coupleNames,
+                    location: newPreWeddingStoryForm.location,
+                    date: newPreWeddingStoryForm.date,
+                    coverImage: newPreWeddingStoryForm.coverImage,
+                    description: newPreWeddingStoryForm.description,
+                    images: newPreWeddingStoryForm.images.length > 0 ? newPreWeddingStoryForm.images : [newPreWeddingStoryForm.coverImage],
+                    featuredImages: newPreWeddingStoryForm.featuredImages || [],
+                  };
+                  await addPreWeddingStory(newStory);
+                  setNewPreWeddingStoryModal(false);
+                  showToast('Pre-wedding story created successfully.');
+                }}
+                className="px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs uppercase tracking-wider rounded-xs cursor-pointer font-medium"
+              >
+                Create Story
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 0D. Modal: Edit Existing Pre-Wedding Story */}
+      {editingPreWeddingStory && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-neutral-200 p-6 sm:p-8 rounded-sm shadow-2xl max-w-2xl w-full space-y-5 animate-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
+              <div>
+                <span className="text-[10px] tracking-wider uppercase text-neutral-400 font-medium">
+                  EDIT PRE-WEDDING STORY
+                </span>
+                <h3 className="font-serif text-xl text-neutral-900 font-normal">
+                  {editingPreWeddingStory.coupleNames}
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingPreWeddingStory(null)}
+                className="text-neutral-400 hover:text-neutral-700 p-1 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Couple Names *
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPreWeddingStory.coupleNames}
+                    onChange={(e) =>
+                      setEditingPreWeddingStory({ ...editingPreWeddingStory, coupleNames: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Story Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPreWeddingStory.title}
+                    onChange={(e) =>
+                      setEditingPreWeddingStory({ ...editingPreWeddingStory, title: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPreWeddingStory.location || ''}
+                    onChange={(e) =>
+                      setEditingPreWeddingStory({ ...editingPreWeddingStory, location: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Date / Season
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPreWeddingStory.date || ''}
+                    onChange={(e) =>
+                      setEditingPreWeddingStory({ ...editingPreWeddingStory, date: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                  Story Description
+                </label>
+                <textarea
+                  rows={3}
+                  value={editingPreWeddingStory.description || ''}
+                  onChange={(e) =>
+                    setEditingPreWeddingStory({ ...editingPreWeddingStory, description: e.target.value })
+                  }
+                  className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                />
+              </div>
+
+              {/* Cover Photo */}
+              <CloudinaryImageUpload
+                label="Cover Image *"
+                folder="images"
+                currentUrl={editingPreWeddingStory.coverImage}
+                onUploaded={(url) => setEditingPreWeddingStory({ ...editingPreWeddingStory, coverImage: url })}
+              />
+
+              {/* Additional Photos */}
+              <div className="pt-3 border-t border-neutral-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs uppercase tracking-wider text-neutral-700 font-semibold">
+                    Story Photos ({editingPreWeddingStory.images?.length || 0})
+                  </label>
+                  <span className="text-[10px] text-neutral-400">
+                    Upload portrait sessions, cinematic angles, &amp; frames
+                  </span>
+                </div>
+
+                {/* Batch Multiple Photos Upload */}
+                <BatchImageUpload
+                  label="Upload Multiple Photos at Once"
+                  helperText="Select several pre-wedding photos (Ctrl/Cmd + click) to upload simultaneously."
+                  folder="images"
+                  onPhotosUploaded={(urls) => {
+                    setEditingPreWeddingStory((prev) =>
+                      prev ? { ...prev, images: [...(prev.images || []), ...urls] } : prev
+                    );
+                    showToast(`${urls.length} photos added to pre-wedding story.`);
+                  }}
+                />
+
+                <div className="pt-1">
+                  <CloudinaryImageUpload
+                    label="Or Upload Single Photo"
+                    folder="images"
+                    currentUrl=""
+                    onUploaded={(url) => {
+                      if (url) {
+                        setEditingPreWeddingStory((prev) =>
+                          prev ? { ...prev, images: [...(prev.images || []), url] } : prev
+                        );
+                        showToast('Photo added to pre-wedding story.');
+                      }
+                    }}
+                  />
+                </div>
+
+                {/* Thumbnail strip of existing photos */}
+                {editingPreWeddingStory.images && editingPreWeddingStory.images.length > 0 && (
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 pt-2">
+                    {editingPreWeddingStory.images.map((imgUrl, idx) => {
+                      const isFeatured = editingPreWeddingStory.featuredImages?.includes(imgUrl);
+                      return (
+                        <div key={idx} className="relative aspect-square bg-neutral-100 rounded-xs overflow-hidden group">
+                          <img
+                            src={getOptimizedCloudinaryUrl(imgUrl, { width: 200 })}
+                            alt={`Photo ${idx + 1}`}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover object-top"
+                          />
+                          {/* Star toggle button for featuring on Homepage Selected Work */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentFeat = editingPreWeddingStory.featuredImages || [];
+                              const nextFeat = isFeatured
+                                ? currentFeat.filter((url) => url !== imgUrl)
+                                : [...currentFeat, imgUrl];
+                              setEditingPreWeddingStory((prev) =>
+                                prev ? { ...prev, featuredImages: nextFeat } : prev
+                              );
+                            }}
+                            className={`absolute top-1 left-1 p-1 rounded-full text-xs transition-colors cursor-pointer ${
+                              isFeatured
+                                ? 'bg-amber-400 text-neutral-950 shadow-xs'
+                                : 'bg-black/60 hover:bg-black/80 text-white/70 hover:text-white'
+                            }`}
+                            title={isFeatured ? 'Featured on Homepage Selected Work (Click to unfeature)' : 'Feature on Homepage Selected Work'}
+                          >
+                            <Star size={11} className={isFeatured ? 'fill-neutral-950' : ''} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingPreWeddingStory((prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      images: prev.images.filter((_, i) => i !== idx),
+                                      featuredImages: (prev.featuredImages || []).filter((url) => url !== imgUrl),
+                                    }
+                                  : prev
+                              );
+                            }}
+                            className="absolute top-1 right-1 bg-black/70 hover:bg-rose-600 text-white p-1 rounded-full text-xs transition-colors cursor-pointer"
+                            title="Remove Photo"
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-neutral-100">
+              <button
+                onClick={() => setEditingPreWeddingStory(null)}
+                className="px-4 py-2 border border-neutral-300 text-neutral-700 text-xs uppercase tracking-wider rounded-xs hover:bg-neutral-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!editingPreWeddingStory.coupleNames || !editingPreWeddingStory.title || !editingPreWeddingStory.coverImage) {
+                    alert('Please provide couple names, story title, and a cover image.');
+                    return;
+                  }
+                  await updatePreWeddingStory(editingPreWeddingStory);
+                  setEditingPreWeddingStory(null);
+                  showToast('Pre-wedding story updated.');
                 }}
                 className="px-5 py-2 bg-neutral-900 hover:bg-neutral-800 text-white text-xs uppercase tracking-wider rounded-xs cursor-pointer font-medium"
               >

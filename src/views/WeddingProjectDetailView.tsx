@@ -1,18 +1,20 @@
-import React, { useEffect } from 'react';
-import { ArrowLeft, Calendar, MapPin, Images, Heart } from 'lucide-react';
+import React, { useEffect, useMemo } from 'react';
+import { ArrowLeft, Calendar, MapPin, Heart } from 'lucide-react';
 import { NavPage, SelectedWorkItem, WeddingProject } from '../types';
 import { ScrollReveal } from '../components/ScrollReveal';
 import { getOptimizedCloudinaryUrl, getCloudinarySrcSet } from '../lib/cloudinary';
 
 interface WeddingProjectDetailViewProps {
   project: WeddingProject;
+  storyType?: 'wedding' | 'prewedding';
   onBack: () => void;
-  onNavigate: (page: NavPage, pkg?: string, initialPortfolioTab?: 'photos' | 'projects') => void;
-  onOpenLightbox: (item: SelectedWorkItem) => void;
+  onNavigate: (page: NavPage, pkg?: string, initialPortfolioTab?: 'photos' | 'projects' | 'videos') => void;
+  onOpenLightbox: (item: SelectedWorkItem, contextItems?: SelectedWorkItem[]) => void;
 }
 
 export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> = ({
   project,
+  storyType = 'wedding',
   onBack,
   onNavigate,
   onOpenLightbox,
@@ -22,6 +24,16 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
   }, [project.id]);
 
   const images = project.images && project.images.length > 0 ? project.images : [project.coverImage];
+  const isPrewedding = storyType === 'prewedding';
+
+  const projectGalleryItems: SelectedWorkItem[] = useMemo(() => {
+    return images.map((url, i) => ({
+      id: 888000 + i,
+      title: `${project.coupleNames} - Photo #${i + 1}`,
+      category: project.coupleNames,
+      imageUrl: url,
+    }));
+  }, [images, project.coupleNames]);
 
   return (
     <div className="w-full bg-white text-neutral-900 animate-fadeIn">
@@ -32,12 +44,14 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
           className="inline-flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs tracking-[0.14em] sm:tracking-[0.2em] uppercase font-medium text-neutral-600 hover:text-black transition-colors cursor-pointer group py-1.5"
         >
           <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform sm:w-4 sm:h-4" />
-          <span className="sm:hidden">Back to Projects</span>
-          <span className="hidden sm:inline">Back to Wedding Projects</span>
+          <span className="sm:hidden">Back to Stories</span>
+          <span className="hidden sm:inline">
+            {isPrewedding ? 'Back to Pre-Wedding Stories' : 'Back to Wedding Stories'}
+          </span>
         </button>
 
         <div className="text-[9px] sm:text-[11px] tracking-wider sm:tracking-widest uppercase text-neutral-400 font-medium">
-          Wedding Archives
+          {isPrewedding ? 'Pre-Wedding Archives' : 'Wedding Archives'}
         </div>
       </section>
 
@@ -56,7 +70,7 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
 
         <div className="absolute bottom-4 sm:bottom-10 left-4 sm:left-10 right-4 sm:right-10 max-w-5xl text-white space-y-1.5 sm:space-y-3">
           <span className="text-[9px] sm:text-[11px] tracking-[0.2em] sm:tracking-[0.25em] uppercase text-neutral-300 font-medium block">
-            Real Wedding Celebration
+            {isPrewedding ? 'Pre-Wedding Story' : 'Real Wedding Celebration'}
           </span>
           <h1 className="font-serif text-2xl sm:text-4xl md:text-5xl font-light leading-tight">
             {project.coupleNames}
@@ -75,9 +89,6 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
                 <Calendar size={11} className="text-white/80 sm:w-3.5 sm:h-3.5" /> {project.date}
               </span>
             )}
-            <span className="inline-flex items-center gap-1 text-neutral-300 bg-white/10 px-2 py-0.5 rounded-xs text-[10px] sm:text-xs backdrop-blur-xs">
-              <Images size={11} /> {images.length} Photographs
-            </span>
           </div>
         </div>
       </section>
@@ -86,10 +97,10 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
       <section className="py-10 sm:py-16 px-4 sm:px-8 max-w-4xl mx-auto text-center space-y-4 sm:space-y-6">
         <ScrollReveal distance={14} duration={0.6} className="space-y-3 sm:space-y-4">
           <span className="text-[10px] sm:text-[11px] tracking-[0.2em] sm:tracking-[0.25em] uppercase text-neutral-400 font-medium block">
-            THE CELEBRATION
+            {isPrewedding ? 'THE CHAPTER' : 'THE CELEBRATION'}
           </span>
           <h2 className="font-serif text-xl sm:text-3xl md:text-4xl text-neutral-900 font-normal leading-snug px-2">
-            Honouring Traditions, Bound by Love
+            {isPrewedding ? 'Romance in Anticipation' : 'Honouring Traditions, Bound by Love'}
           </h2>
           {project.description ? (
             <p className="text-neutral-600 font-sans text-xs sm:text-base leading-relaxed max-w-2xl mx-auto px-2">
@@ -97,7 +108,9 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
             </p>
           ) : (
             <p className="text-neutral-500 font-sans text-xs sm:text-base leading-relaxed max-w-2xl mx-auto px-2 italic">
-              "A timeless celebration of sacred promises, joyful laughter with loved ones, and candid heirloom memories crafted to endure for decades."
+              {isPrewedding
+                ? '"Intimate pre-wedding moments captured with romance, warmth, and cinematic honesty before the big day."'
+                : '"A timeless celebration of sacred promises, joyful laughter with loved ones, and candid heirloom memories crafted to endure for decades."'}
             </p>
           )}
         </ScrollReveal>
@@ -105,40 +118,33 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
 
       {/* 4. Complete Photographic Gallery */}
       <section className="pb-16 sm:pb-28 px-4 sm:px-8 max-w-7xl mx-auto">
-        <div className="flex items-end justify-between border-b border-neutral-200 pb-3 sm:pb-4 mb-6 sm:mb-8 gap-2">
+        <div className="border-b border-neutral-200 pb-3 sm:pb-4 mb-6 sm:mb-8">
           <div>
             <h3 className="font-serif text-lg sm:text-2xl text-neutral-900 font-normal leading-snug">
-              Ceremonial &amp; Couple Gallery
+              {isPrewedding ? 'Couple & Location Gallery' : 'Ceremonial & Couple Gallery'}
             </h3>
             <p className="text-[11px] sm:text-xs text-neutral-500 mt-0.5">
               Tap any photo to view in full resolution
             </p>
           </div>
-          <span className="text-[10px] sm:text-xs tracking-wider uppercase text-neutral-400 whitespace-nowrap pb-0.5">
-            {images.length} Moments
-          </span>
         </div>
 
         {/* Gallery Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
-          {images.map((imgUrl, idx) => (
-            <ScrollReveal
-              key={idx}
-              delay={(idx % 4) * 0.05}
-              distance={16}
-              duration={0.55}
-            >
-              <div
-                onClick={() =>
-                  onOpenLightbox({
-                    id: 888000 + idx,
-                    title: `${project.coupleNames} - Photo #${idx + 1}`,
-                    category: project.title,
-                    imageUrl: imgUrl,
-                  })
-                }
-                className="group relative aspect-[4/5] bg-neutral-100 overflow-hidden cursor-pointer shadow-xs rounded-xs"
+          {images.map((imgUrl, idx) => {
+            const currentItem = projectGalleryItems[idx];
+
+            return (
+              <ScrollReveal
+                key={idx}
+                delay={(idx % 4) * 0.05}
+                distance={16}
+                duration={0.55}
               >
+                <div
+                  onClick={() => onOpenLightbox(currentItem, projectGalleryItems)}
+                  className="group relative aspect-[4/5] bg-neutral-100 overflow-hidden cursor-pointer shadow-xs rounded-xs"
+                >
                 <img
                   src={getOptimizedCloudinaryUrl(imgUrl, { width: 800 })}
                   srcSet={getCloudinarySrcSet(imgUrl, [400, 800, 1200])}
@@ -158,7 +164,8 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
                 </div>
               </div>
             </ScrollReveal>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -172,7 +179,7 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
             CAPTURING YOUR UNIQUE STORY
           </span>
           <h2 className="font-serif text-2xl sm:text-4xl font-normal leading-snug">
-            Planning Your Wedding Day?
+            {isPrewedding ? 'Planning Your Pre-Wedding Shoot?' : 'Planning Your Wedding Day?'}
           </h2>
           <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed max-w-lg mx-auto px-2">
             Let us document your celebration with the same elegance, emotional depth, and timeless artistry seen in this story.
@@ -188,7 +195,7 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
               onClick={onBack}
               className="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 border border-white/40 hover:border-white text-white text-[10px] sm:text-xs tracking-[0.14em] sm:tracking-[0.2em] uppercase font-medium rounded-xs transition-colors cursor-pointer text-center"
             >
-              EXPLORE MORE WEDDINGS
+              {isPrewedding ? 'EXPLORE MORE STORIES' : 'EXPLORE MORE WEDDINGS'}
             </button>
           </div>
         </ScrollReveal>

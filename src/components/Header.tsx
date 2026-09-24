@@ -46,22 +46,18 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
           : 'bg-white/95 backdrop-blur-sm border-b border-neutral-100 shadow-xs text-neutral-900'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-6 sm:px-10 h-20 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-3 sm:px-10 h-20 flex items-center justify-between">
         {/* Logo */}
         <button
           id="nav-logo"
           onClick={() => handleNavClick('HOME')}
-          className="text-left group cursor-pointer focus:outline-none"
+          className="text-left group cursor-pointer focus:outline-none flex items-center -ml-1 sm:ml-0"
         >
-          <span
-            className={`text-xs sm:text-sm tracking-[0.28em] font-medium uppercase transition-colors ${
-              isTransparent
-                ? 'text-white group-hover:text-white/80'
-                : 'text-neutral-800 group-hover:text-black'
-            }`}
-          >
-            CAM-MYSTERY
-          </span>
+          <img
+            src="/assets/NavLogo.png"
+            alt="CAM-MYSTERY"
+            className="h-12 sm:h-13 md:h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+          />
         </button>
 
         {/* Desktop Navigation */}
@@ -143,7 +139,7 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
                         isTransparent ? 'bg-white' : 'bg-black'
                       }`}
                     />
-                  )}
+                  )} 
                 </button>
               );
             })}

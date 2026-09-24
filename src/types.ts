@@ -99,7 +99,10 @@ export interface WeddingProject {
   coverImage: string;
   description?: string;
   images: string[];
+  featuredImages?: string[];
 }
+
+export type PreWeddingStory = WeddingProject;
 
 export interface EnquiryItem {
   id: string;

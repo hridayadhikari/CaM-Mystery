@@ -24,9 +24,11 @@ function MainApp() {
   const [currentPage, setCurrentPage] = useState<NavPage>('HOME');
   const [selectedPackage, setSelectedPackage] = useState<string | undefined>(undefined);
   const [activeLightboxItem, setActiveLightboxItem] = useState<SelectedWorkItem | null>(null);
+  const [activeLightboxItems, setActiveLightboxItems] = useState<SelectedWorkItem[] | null>(null);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [activeProject, setActiveProject] = useState<WeddingProject | null>(null);
-  const { selectedWork, videoFeature, weddingProjects } = useCMS();
+  const [activeStoryType, setActiveStoryType] = useState<'wedding' | 'prewedding'>('wedding');
+  const { selectedWork, videoFeature, weddingProjects, preWeddingStories } = useCMS();
 
   // Sync with browser URL pathname and hash for easy navigation & sharing
   useEffect(() => {
@@ -37,9 +39,16 @@ function MainApp() {
       // Check if URL matches a project path (e.g. /#project-proj-1 or /#wedding-vikram-radhika)
       if (hash.startsWith('project-')) {
         const projId = hash.replace('project-', '');
-        const found = weddingProjects.find((p) => p.id === projId);
-        if (found) {
-          setActiveProject(found);
+        const foundWedding = weddingProjects.find((p) => p.id === projId);
+        if (foundWedding) {
+          setActiveProject(foundWedding);
+          setActiveStoryType('wedding');
+          return;
+        }
+        const foundPrewedding = preWeddingStories.find((p) => p.id === projId);
+        if (foundPrewedding) {
+          setActiveProject(foundPrewedding);
+          setActiveStoryType('prewedding');
           return;
         }
       }
@@ -53,13 +62,16 @@ function MainApp() {
       } else if (
         pathname === '/portfolio' ||
         hash === 'portfolio' ||
+        hash === 'pre-wedding-stories' ||
         hash === 'wedding-projects' ||
         hash === 'videos' ||
         hash === 'films' ||
         hash === 'pre-wedding-films'
       ) {
         setCurrentPage('PORTFOLIO');
-        if (hash === 'wedding-projects') {
+        if (hash === 'pre-wedding-stories' || hash === 'portfolio') {
+          setPortfolioInitialTab('photos');
+        } else if (hash === 'wedding-projects') {
           setPortfolioInitialTab('projects');
         } else if (hash === 'videos' || hash === 'films' || hash === 'pre-wedding-films') {
           setPortfolioInitialTab('videos');
@@ -104,17 +116,19 @@ function MainApp() {
     setIsVideoModalOpen(true);
   };
 
-  const handleOpenProject = (project: WeddingProject) => {
+  const handleOpenProject = (project: WeddingProject, storyType: 'wedding' | 'prewedding' = 'wedding') => {
     setActiveProject(project);
+    setActiveStoryType(storyType);
     window.history.pushState(null, '', `/#project-${project.id}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleBackFromProject = () => {
+    const isPrewedding = activeStoryType === 'prewedding';
     setActiveProject(null);
     setCurrentPage('PORTFOLIO');
-    setPortfolioInitialTab('projects');
-    window.history.pushState(null, '', '/#wedding-projects');
+    setPortfolioInitialTab(isPrewedding ? 'photos' : 'projects');
+    window.history.pushState(null, '', isPrewedding ? '/#pre-wedding-stories' : '/#wedding-projects');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -157,19 +171,26 @@ function MainApp() {
 
       {/* Main Page View */}
       <main className={`flex-1 w-full ${currentPage !== 'HOME' && currentPage !== 'ADMIN' ? 'pt-20' : ''}`}>
-        {activeProject ? (
+            {activeProject ? (
           <WeddingProjectDetailView
             project={activeProject}
+            storyType={activeStoryType}
             onBack={handleBackFromProject}
             onNavigate={handleNavigate}
-            onOpenLightbox={(item) => setActiveLightboxItem(item)}
+            onOpenLightbox={(item, contextItems) => {
+              setActiveLightboxItems(contextItems || null);
+              setActiveLightboxItem(item);
+            }}
           />
         ) : (
           <>
             {currentPage === 'HOME' && (
               <HomeView
                 onNavigate={handleNavigate}
-                onOpenLightbox={(item) => setActiveLightboxItem(item)}
+                onOpenLightbox={(item, contextItems) => {
+                  setActiveLightboxItems(contextItems || null);
+                  setActiveLightboxItem(item);
+                }}
                 onOpenVideo={handleOpenVideoModal}
                 onOpenProject={handleOpenProject}
               />
@@ -182,7 +203,10 @@ function MainApp() {
                 key={portfolioInitialTab}
                 initialTab={portfolioInitialTab}
                 onNavigate={handleNavigate}
-                onOpenLightbox={(item) => setActiveLightboxItem(item)}
+                onOpenLightbox={(item) => {
+                  setActiveLightboxItems(null);
+                  setActiveLightboxItem(item);
+                }}
                 onOpenVideo={handleOpenVideoModal}
                 onOpenProject={handleOpenProject}
               />
@@ -208,11 +232,14 @@ function MainApp() {
         <Footer onNavigate={handleNavigate} />
       )}
 
-      {/* Lightbox for Selected Work */}
+      {/* Lightbox for Selected Work & Story Projects */}
       <LightboxModal
         item={activeLightboxItem}
-        items={selectedWork}
-        onClose={() => setActiveLightboxItem(null)}
+        items={activeLightboxItems && activeLightboxItems.length > 0 ? activeLightboxItems : selectedWork}
+        onClose={() => {
+          setActiveLightboxItem(null);
+          setActiveLightboxItems(null);
+        }}
         onSelect={(item) => setActiveLightboxItem(item)}
       />
 

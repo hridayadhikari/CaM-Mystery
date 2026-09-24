@@ -15,6 +15,7 @@ import {
   BookingFormData,
   BookingStatus,
   PreWeddingVideo,
+  PreWeddingStory,
 } from '../types';
 import { supabase } from './supabase';
 import { sendBookingToGoogleSheet } from './googleSheets';
@@ -24,6 +25,7 @@ interface CMSContextType {
   heroSlides: HeroSlide[];
   selectedWork: SelectedWorkItem[];
   weddingProjects: WeddingProject[];
+  preWeddingStories: PreWeddingStory[];
   pricingPackages: PricingPackage[];
   teamMembers: TeamMember[];
   testimonials: Testimonial[];
@@ -51,6 +53,11 @@ interface CMSContextType {
   addWeddingProject: (proj: WeddingProject) => Promise<void>;
   updateWeddingProject: (proj: WeddingProject) => Promise<void>;
   deleteWeddingProject: (id: string) => Promise<void>;
+
+  // Pre-Wedding Stories CRUD
+  addPreWeddingStory: (story: PreWeddingStory) => Promise<void>;
+  updatePreWeddingStory: (story: PreWeddingStory) => Promise<void>;
+  deletePreWeddingStory: (id: string) => Promise<void>;
 
   // Selected Work CRUD
   addSelectedWork: (item: Omit<SelectedWorkItem, 'id'>) => Promise<void>;
@@ -152,12 +159,15 @@ const normalizePricing = (row: any): PricingPackage => ({
 const normalizeWeddingProject = (row: any): WeddingProject => ({
   id: String(row.id),
   title: row.title || '',
-  coupleNames: row.coupleNames || row.couplenames || '',
+  coupleNames: row.coupleNames || row.couplenames || row.couple_names || '',
   location: row.location || '',
   date: row.date || '',
   coverImage: row.coverImage || row.coverimage || row.cover_image || '',
   description: row.description || '',
   images: Array.isArray(row.images) ? row.images : [],
+  featuredImages: Array.isArray(row.featuredImages || row.featured_images)
+    ? (row.featuredImages || row.featured_images)
+    : [],
 });
 
 const normalizeEnquiry = (row: any): EnquiryItem => ({
@@ -258,6 +268,9 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [weddingProjects, setWeddingProjects] = useState<WeddingProject[]>(() =>
     getLocal('wedding_projects', []).map(normalizeWeddingProject)
   );
+  const [preWeddingStories, setPreWeddingStories] = useState<PreWeddingStory[]>(() =>
+    getLocal('pre_wedding_stories', []).map(normalizeWeddingProject)
+  );
   const [preWeddingVideos, setPreWeddingVideos] = useState<PreWeddingVideo[]>(() =>
     getLocal('pre_wedding_videos', []).map(normalizePreWeddingVideo)
   );
@@ -299,6 +312,9 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } else if (row.key === 'wedding_projects' && Array.isArray(row.value)) {
             setWeddingProjects(row.value);
             setLocal('wedding_projects', row.value);
+          } else if (row.key === 'pre_wedding_stories' && Array.isArray(row.value)) {
+            setPreWeddingStories(row.value);
+            setLocal('pre_wedding_stories', row.value);
           } else if (row.key === 'pre_wedding_videos' && Array.isArray(row.value)) {
             const normalized = row.value.map(normalizePreWeddingVideo);
             setPreWeddingVideos(normalized);
@@ -483,6 +499,38 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch (err) {
         console.info('[CMS] pre_wedding_videos fetch exception, using cached state:', err);
       }
+
+      // 11. Fetch Pre-Wedding Stories (dedicated table with fallback to site_settings)
+      try {
+        let storyData: any[] | null = null;
+        let storyError: any = null;
+
+        const resStory = await supabase
+          .from('pre_wedding_stories')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (resStory.error) {
+          const plainStoryRes = await supabase.from('pre_wedding_stories').select('*');
+          if (plainStoryRes.error) {
+            storyError = plainStoryRes.error;
+          } else {
+            storyData = plainStoryRes.data;
+          }
+        } else {
+          storyData = resStory.data;
+        }
+
+        if (storyError) {
+          console.info('[CMS] pre_wedding_stories table query fallback (may use site_settings):', storyError.message);
+        } else if (storyData && Array.isArray(storyData) && storyData.length > 0) {
+          const normalized = storyData.map(normalizeWeddingProject);
+          setPreWeddingStories(normalized);
+          setLocal('pre_wedding_stories', normalized);
+        }
+      } catch (err) {
+        console.info('[CMS] pre_wedding_stories fetch exception, using cached state:', err);
+      }
     } catch (err) {
       console.warn('[CMS] Supabase load error:', err);
     } finally {
@@ -555,6 +603,20 @@ const toDbPreWeddingVideo = (item: Partial<PreWeddingVideo>) => {
   if (item.displayOrder !== undefined) res.display_order = item.displayOrder;
   if (item.isFeatured !== undefined) res.is_featured = item.isFeatured;
   if (item.createdAt !== undefined) res.created_at = item.createdAt;
+  return res;
+};
+
+const toDbPreWeddingStory = (item: Partial<PreWeddingStory>) => {
+  const res: Record<string, any> = {};
+  if (item.id !== undefined) res.id = item.id;
+  if (item.title !== undefined) res.title = item.title;
+  if (item.coupleNames !== undefined) res.couple_names = item.coupleNames;
+  if (item.location !== undefined) res.location = item.location;
+  if (item.date !== undefined) res.date = item.date;
+  if (item.coverImage !== undefined) res.cover_image = item.coverImage;
+  if (item.description !== undefined) res.description = item.description;
+  if (item.images !== undefined) res.images = item.images;
+  if (item.featuredImages !== undefined) res.featured_images = item.featuredImages;
   return res;
 };
 
@@ -984,6 +1046,66 @@ const toDbPreWeddingVideo = (item: Partial<PreWeddingVideo>) => {
     await safeSupabaseWrite('site_settings', 'upsert', { key: 'wedding_projects', value: updated });
   };
 
+  // Pre-Wedding Stories CRUD (Dual write: Supabase pre_wedding_stories table + site_settings fallback)
+  const addPreWeddingStory = async (story: PreWeddingStory) => {
+    const updated = [story, ...preWeddingStories];
+    setPreWeddingStories(updated);
+    setLocal('pre_wedding_stories', updated);
+
+    // 1. Direct table write attempt
+    try {
+      const dbPayload = toDbPreWeddingStory(story);
+      const { error } = await supabase.from('pre_wedding_stories').insert(dbPayload);
+      if (error) {
+        console.warn('[CMS] pre_wedding_stories table insert warning, falling back to site_settings:', error.message);
+        await safeSupabaseWrite('site_settings', 'upsert', { key: 'pre_wedding_stories', value: updated });
+      }
+    } catch (e) {
+      console.warn('[CMS] pre_wedding_stories insert exception, saving to site_settings:', e);
+      await safeSupabaseWrite('site_settings', 'upsert', { key: 'pre_wedding_stories', value: updated });
+    }
+  };
+
+  const updatePreWeddingStory = async (story: PreWeddingStory) => {
+    const updated = preWeddingStories.map((s) => (s.id === story.id ? story : s));
+    setPreWeddingStories(updated);
+    setLocal('pre_wedding_stories', updated);
+
+    // 1. Direct table write attempt
+    try {
+      const dbPayload = toDbPreWeddingStory(story);
+      const { error } = await supabase
+        .from('pre_wedding_stories')
+        .update(dbPayload)
+        .eq('id', story.id);
+      if (error) {
+        console.warn('[CMS] pre_wedding_stories table update warning, falling back to site_settings:', error.message);
+        await safeSupabaseWrite('site_settings', 'upsert', { key: 'pre_wedding_stories', value: updated });
+      }
+    } catch (e) {
+      console.warn('[CMS] pre_wedding_stories update exception, saving to site_settings:', e);
+      await safeSupabaseWrite('site_settings', 'upsert', { key: 'pre_wedding_stories', value: updated });
+    }
+  };
+
+  const deletePreWeddingStory = async (id: string) => {
+    const updated = preWeddingStories.filter((s) => s.id !== id);
+    setPreWeddingStories(updated);
+    setLocal('pre_wedding_stories', updated);
+
+    // 1. Direct table delete attempt
+    try {
+      const { error } = await supabase.from('pre_wedding_stories').delete().eq('id', id);
+      if (error) {
+        console.warn('[CMS] pre_wedding_stories table delete warning, falling back to site_settings:', error.message);
+        await safeSupabaseWrite('site_settings', 'upsert', { key: 'pre_wedding_stories', value: updated });
+      }
+    } catch (e) {
+      console.warn('[CMS] pre_wedding_stories delete exception, saving to site_settings:', e);
+      await safeSupabaseWrite('site_settings', 'upsert', { key: 'pre_wedding_stories', value: updated });
+    }
+  };
+
   // Pre-Wedding Videos CRUD (Dual write: Supabase pre_wedding_videos table + site_settings fallback)
   const addPreWeddingVideo = async (video: PreWeddingVideo) => {
     const updated = [video, ...preWeddingVideos];
@@ -1051,6 +1173,7 @@ const toDbPreWeddingVideo = (item: Partial<PreWeddingVideo>) => {
         heroSlides,
         selectedWork,
         weddingProjects,
+        preWeddingStories,
         pricingPackages,
         teamMembers,
         testimonials,
@@ -1072,6 +1195,9 @@ const toDbPreWeddingVideo = (item: Partial<PreWeddingVideo>) => {
         addWeddingProject,
         updateWeddingProject,
         deleteWeddingProject,
+        addPreWeddingStory,
+        updatePreWeddingStory,
+        deletePreWeddingStory,
         addSelectedWork,
         updateSelectedWork,
         deleteSelectedWork,

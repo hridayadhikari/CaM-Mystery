@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { NavPage, SelectedWorkItem, WeddingProject } from '../types';
-import { Play, Images, ChevronRight, MapPin, Calendar } from 'lucide-react';
+import { Play, ChevronRight, MapPin, Calendar } from 'lucide-react';
 import { ScrollReveal } from '../components/ScrollReveal';
 import { useCMS } from '../lib/cmsStore';
 import { getOptimizedCloudinaryUrl, getCloudinarySrcSet } from '../lib/cloudinary';
 
 interface HomeViewProps {
   onNavigate: (page: NavPage, pkg?: string, initialPortfolioTab?: 'photos' | 'projects' | 'videos') => void;
-  onOpenLightbox: (item: SelectedWorkItem) => void;
+  onOpenLightbox: (item: SelectedWorkItem, contextItems?: SelectedWorkItem[]) => void;
   onOpenVideo: (video?: { url: string; title?: string; poster?: string }) => void;
   onOpenProject?: (project: WeddingProject) => void;
 }
@@ -18,7 +18,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onOpenVideo,
   onOpenProject,
 }) => {
-  const { heroSlides, selectedWork, testimonials, videoFeature, weddingProjects, aboutImages } = useCMS();
+  const { heroSlides, selectedWork, testimonials, videoFeature, weddingProjects, preWeddingStories, aboutImages } = useCMS();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Auto advance hero slider every 6 seconds
@@ -108,8 +108,50 @@ export const HomeView: React.FC<HomeViewProps> = ({
         {/* 8-Photo Grid: 4 columns x 2 rows */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
           {(() => {
-            const featuredList = selectedWork.filter((item) => item.isFeatured);
-            const displayItems = featuredList.length > 0 ? featuredList : selectedWork.slice(0, 8);
+            // 1. Featured photos from Wedding Projects
+            const featuredFromWeddings: SelectedWorkItem[] = [];
+            weddingProjects.forEach((proj, pIdx) => {
+              const featList = proj.featuredImages || [];
+              featList.forEach((url, iIdx) => {
+                featuredFromWeddings.push({
+                  id: 100000 + pIdx * 100 + iIdx,
+                  title: proj.coupleNames || proj.title,
+                  category: 'Wedding Story',
+                  imageUrl: url,
+                  isFeatured: true,
+                });
+              });
+            });
+
+            // 2. Featured photos from Pre-Wedding Stories
+            const featuredFromPreWeddings: SelectedWorkItem[] = [];
+            preWeddingStories.forEach((story, sIdx) => {
+              const featList = story.featuredImages || [];
+              featList.forEach((url, iIdx) => {
+                featuredFromPreWeddings.push({
+                  id: 200000 + sIdx * 100 + iIdx,
+                  title: story.coupleNames || story.title,
+                  category: 'Pre-Wedding Story',
+                  imageUrl: url,
+                  isFeatured: true,
+                });
+              });
+            });
+
+            // 3. Featured items from selectedWork
+            const featuredFromSelectedWork = selectedWork.filter((item) => item.isFeatured);
+
+            // Combine all featured
+            const allFeatured = [
+              ...featuredFromWeddings,
+              ...featuredFromPreWeddings,
+              ...featuredFromSelectedWork,
+            ];
+
+            const displayItems = allFeatured.length > 0
+              ? allFeatured
+              : selectedWork.slice(0, 8);
+
             return displayItems.map((item, idx) => (
               <ScrollReveal
                 key={item.id}
@@ -118,7 +160,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 duration={0.55}
               >
                   <div
-                    onClick={() => onOpenLightbox(item)}
+                    onClick={() => onOpenLightbox(item, displayItems)}
                     className="group relative aspect-[4/5] bg-neutral-100 overflow-hidden cursor-pointer"
                   >
                     <img
@@ -215,12 +257,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       decoding="async"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent opacity-80 group-hover:opacity-95 transition-opacity" />
-
-                    {/* Photo count tag */}
-                    <div className="absolute top-3 right-3 bg-neutral-950/80 backdrop-blur-md text-white text-[10px] tracking-wider px-2.5 py-1 rounded-xs flex items-center gap-1.5 border border-white/10">
-                      <Images size={12} />
-                      <span>{project.images?.length || 1} Photos</span>
-                    </div>
 
                     {/* Couple names on cover */}
                     <div className="absolute bottom-3.5 left-4 right-4 text-white">
