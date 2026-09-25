@@ -16,6 +16,7 @@ import {
   Loader2,
   Calendar,
   ExternalLink,
+  BookOpen,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useCMS } from '../lib/cmsStore';
