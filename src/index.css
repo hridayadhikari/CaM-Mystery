@@ -29,6 +29,27 @@
   border-radius: 2% !important;
 }
 
+/* Mobile-friendly touch & input enhancements:
+   Prevent iOS auto-zoom on form inputs by ensuring 16px minimum font size on mobile screens
+   while preserving desktop styling seamlessly. */
+@media (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Optimize touch response on interactive controls */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"] {
+  touch-action: manipulation;
+}
+
 
 
 

@@ -38,6 +38,27 @@ export const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
 
   const isTransparent = currentPage === 'HOME' && !isScrolled;
 
+  // Mobile Back button / history integration: close mobile drawer on Back button
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    window.history.pushState({ modal: 'mobile-menu' }, '');
+    let closedByPopstate = false;
+
+    const handlePopState = () => {
+      closedByPopstate = true;
+      setMobileMenuOpen(false);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (!closedByPopstate && window.history.state?.modal === 'mobile-menu') {
+        window.history.back();
+      }
+    };
+  }, [mobileMenuOpen]);
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-40 w-full transition-all duration-300 ${

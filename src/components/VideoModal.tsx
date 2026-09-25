@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X, Film } from 'lucide-react';
 
 interface VideoModalProps {
@@ -16,18 +16,67 @@ export const VideoModal: React.FC<VideoModalProps> = ({
   videoTitle = '',
   posterUrl,
 }) => {
+  const closedByPopstateRef = useRef(false);
+
+  // Background scroll locking
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    const originalTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.touchAction = originalTouchAction;
+    };
+  }, [isOpen]);
+
+  // Mobile Back button / history integration
+  useEffect(() => {
+    if (!isOpen) return;
+    window.history.pushState({ modal: 'video-player' }, '');
+    closedByPopstateRef.current = false;
+
+    const handlePopState = () => {
+      closedByPopstateRef.current = true;
+      onClose();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (!closedByPopstateRef.current && window.history.state?.modal === 'video-player') {
+        window.history.back();
+      }
+    };
+  }, [isOpen, onClose]);
+
+  // ESC key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
     <div
       id="video-modal-backdrop"
-      className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 md:p-8 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 md:p-8 animate-in fade-in duration-200 select-none touch-none overscroll-none"
       onClick={onClose}
     >
       <button
         id="video-modal-close"
         onClick={onClose}
-        className="absolute top-4 right-4 sm:top-6 sm:right-6 text-white/70 hover:text-white p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer z-20"
+        className="absolute top-4 right-4 sm:top-6 sm:right-6 text-white/70 hover:text-white p-2 rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer z-20 touch-manipulation"
         aria-label="Close video player"
       >
         <X size={20} />

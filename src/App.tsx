@@ -94,7 +94,7 @@ function MainApp() {
       window.removeEventListener('popstate', handleLocationChange);
       window.removeEventListener('hashchange', handleLocationChange);
     };
-  }, [weddingProjects]);
+  }, [weddingProjects, preWeddingStories]);
 
   const [portfolioInitialTab, setPortfolioInitialTab] = useState<'photos' | 'projects' | 'videos'>('photos');
   const [activeVideoModalData, setActiveVideoModalData] = useState<{

@@ -22,6 +22,28 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onConfirm,
   onClose,
 }) => {
+  const closedByPopstateRef = React.useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    window.history.pushState({ modal: 'confirm-dialog' }, '');
+    closedByPopstateRef.current = false;
+
+    const handlePopState = () => {
+      closedByPopstateRef.current = true;
+      onClose();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (!closedByPopstateRef.current && window.history.state?.modal === 'confirm-dialog') {
+        window.history.back();
+      }
+    };
+  }, [isOpen, onClose]);
+
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {

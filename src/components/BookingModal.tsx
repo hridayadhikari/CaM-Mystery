@@ -101,6 +101,29 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     }
   }, [isOpen]);
 
+  // History & Mobile Back-button handling
+  const closedByPopstateRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    window.history.pushState({ modal: 'booking-reservation' }, '');
+    closedByPopstateRef.current = false;
+
+    const handlePopState = () => {
+      closedByPopstateRef.current = true;
+      onClose();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (!closedByPopstateRef.current && window.history.state?.modal === 'booking-reservation') {
+        window.history.back();
+      }
+    };
+  }, [isOpen, onClose]);
+
   // Handle ESC key to close modal
   useEffect(() => {
     if (!isOpen) return;

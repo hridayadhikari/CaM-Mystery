@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SelectedWorkItem } from '../types';
 import { getOptimizedCloudinaryUrl, getCloudinarySrcSet } from '../lib/cloudinary';
@@ -33,6 +33,46 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   useEffect(() => {
     setCurrentIndex(findItemIndex(item));
   }, [item?.id, item?.imageUrl, activeList.length]);
+
+  // Lock background scroll and interactions while lightbox is open
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.touchAction = originalTouchAction;
+    };
+  }, []);
+
+  // History & Back-button handling: on mobile, back closes the lightbox before navigating
+  const closedByPopstateRef = useRef(false);
+
+  useEffect(() => {
+    // Push history state entry for the open lightbox
+    window.history.pushState({ modal: 'lightbox' }, '');
+    closedByPopstateRef.current = false;
+
+    const handlePopState = () => {
+      closedByPopstateRef.current = true;
+      onClose();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      // If modal was closed via UI (close button, backdrop, Escape) and not popstate,
+      // pop the pushed state entry so browser Back history stays intact
+      if (!closedByPopstateRef.current) {
+        if (window.history.state?.modal === 'lightbox') {
+          window.history.back();
+        }
+      }
+    };
+  }, [onClose]);
 
   const currentDisplayItem = activeList[currentIndex] || item;
   const hasMultiple = activeList.length > 1;
@@ -75,7 +115,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   return (
     <div
       id="lightbox-backdrop"
-      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-200 select-none"
+      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-200 select-none touch-none overscroll-none"
       onClick={onClose}
     >
       <button
@@ -85,7 +125,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
           e.stopPropagation();
           onClose();
         }}
-        className="absolute top-6 right-6 text-white/70 hover:text-white p-2.5 rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer z-30"
+        className="absolute top-6 right-6 text-white/70 hover:text-white p-2.5 rounded-full bg-white/10 hover:bg-white/20 transition-all cursor-pointer z-30 touch-manipulation"
         aria-label="Close modal"
       >
         <X size={22} />
@@ -98,7 +138,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
             type="button"
             id="lightbox-prev"
             onClick={handlePrev}
-            className="absolute left-4 sm:left-8 text-white/80 hover:text-white p-3 sm:p-3.5 rounded-full bg-black/50 hover:bg-black/75 border border-white/20 hover:border-white/40 shadow-lg transition-all cursor-pointer z-30 active:scale-95"
+            className="absolute left-4 sm:left-8 text-white/80 hover:text-white p-3 sm:p-3.5 rounded-full bg-black/50 hover:bg-black/75 border border-white/20 hover:border-white/40 shadow-lg transition-all cursor-pointer z-30 active:scale-95 touch-manipulation"
             aria-label="Previous photo"
           >
             <ChevronLeft size={26} />
@@ -108,7 +148,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
             type="button"
             id="lightbox-next"
             onClick={handleNext}
-            className="absolute right-4 sm:right-8 text-white/80 hover:text-white p-3 sm:p-3.5 rounded-full bg-black/50 hover:bg-black/75 border border-white/20 hover:border-white/40 shadow-lg transition-all cursor-pointer z-30 active:scale-95"
+            className="absolute right-4 sm:right-8 text-white/80 hover:text-white p-3 sm:p-3.5 rounded-full bg-black/50 hover:bg-black/75 border border-white/20 hover:border-white/40 shadow-lg transition-all cursor-pointer z-30 active:scale-95 touch-manipulation"
             aria-label="Next photo"
           >
             <ChevronRight size={26} />

@@ -39,6 +39,29 @@ export const PhotoFramingModal: React.FC<PhotoFramingModalProps> = ({
     }
   }, [isOpen, initialX, initialY]);
 
+  // Mobile Back button / history integration: close framing modal on Back button
+  const closedByPopstateRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    window.history.pushState({ modal: 'photo-framing' }, '');
+    closedByPopstateRef.current = false;
+
+    const handlePopState = () => {
+      closedByPopstateRef.current = true;
+      onCancel();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (!closedByPopstateRef.current && window.history.state?.modal === 'photo-framing') {
+        window.history.back();
+      }
+    };
+  }, [isOpen, onCancel]);
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
