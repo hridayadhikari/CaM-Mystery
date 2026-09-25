@@ -27,6 +27,10 @@ import {
   FileSpreadsheet,
   Film,
   Play,
+  Crop,
+  ArrowUp,
+  ArrowDown,
+  StarOff,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useCMS } from '../lib/cmsStore';
@@ -48,6 +52,7 @@ import { CloudinaryImageUpload } from '../components/admin/CloudinaryImageUpload
 import { BatchImageUpload } from '../components/admin/BatchImageUpload';
 import { CloudinaryVideoUpload } from '../components/admin/CloudinaryVideoUpload';
 import { ConfirmModal } from '../components/admin/ConfirmModal';
+import { PhotoFramingModal } from '../components/admin/PhotoFramingModal';
 import { getOptimizedCloudinaryUrl } from '../lib/cloudinary';
 
 interface AdminViewProps {
@@ -96,14 +101,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     addPreWeddingStory,
     updatePreWeddingStory,
     deletePreWeddingStory,
+    homepageSelectedOrder,
+    updateHomepageSelectedOrder,
     addSelectedWork,
     updateSelectedWork,
+    updateSelectedWorkOrder,
     deleteSelectedWork,
     addPricingPackage,
     updatePricingPackage,
     deletePricingPackage,
     addTeamMember,
     updateTeamMember,
+    updateTeamMembersOrder,
     deleteTeamMember,
     addTestimonial,
     updateTestimonial,
@@ -160,8 +169,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     };
   }, []);
 
-  // Portfolio Subtab: 'single' (pre-wedding stories) vs 'projects' (full wedding stories) vs 'videos' (pre-wedding films)
-  const [portfolioSubTab, setPortfolioSubTab] = useState<'single' | 'projects' | 'videos'>('single');
+  // Portfolio Subtab: 'single' (pre-wedding stories) vs 'projects' (full wedding stories) vs 'videos' (pre-wedding films) vs 'selected' (selected work on homepage)
+  const [portfolioSubTab, setPortfolioSubTab] = useState<'single' | 'projects' | 'videos' | 'selected'>('single');
 
   // Pre-Wedding Video Form Modals
   const [newVideoModal, setNewVideoModal] = useState(false);
@@ -205,6 +214,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
   });
   const [editingPreWeddingStory, setEditingPreWeddingStory] = useState<PreWeddingStory | null>(null);
   const [isSyncingSheet, setIsSyncingSheet] = useState(false);
+
+  // Framing Editor Modal State
+  const [framingModalState, setFramingModalState] = useState<{
+    isOpen: boolean;
+    imageUrl: string;
+    title: string;
+    initialX: number;
+    initialY: number;
+    onApply: (x: number, y: number) => void;
+  }>({
+    isOpen: false,
+    imageUrl: '',
+    title: 'Adjust Photo Framing',
+    initialX: 50,
+    initialY: 50,
+    onApply: () => {},
+  });
 
   // Success toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -299,7 +325,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     title: '',
     category: 'Wedding Day',
     imageUrl: '',
-    isFeatured: false,
+    isFeatured: true,
+    displayOrder: 0,
   });
   const [editingWork, setEditingWork] = useState<SelectedWorkItem | null>(null);
 
@@ -322,6 +349,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     bio: '',
     imageUrl: '',
     iconName: 'Camera',
+    displayOrder: 0,
   });
   const [editingTeamMember, setEditingTeamMember] = useState<TeamMember | null>(null);
 
@@ -384,7 +412,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
     editingFaq ||
     studioModalOpen ||
     Boolean(selectedBookingDetail) ||
-    confirmModalState.isOpen
+    confirmModalState.isOpen ||
+    framingModalState.isOpen
   );
 
   React.useEffect(() => {
@@ -540,7 +569,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
             <nav className="space-y-1">
               {[
                 { id: 'overview', label: 'Dashboard Overview', icon: Layers },
-                { id: 'portfolio', label: `Portfolio (${selectedWork.length})`, icon: Camera },
+                {
+                  id: 'portfolio',
+                  label: `Portfolio (${preWeddingStories.length + weddingProjects.length + preWeddingVideos.length})`,
+                  icon: Camera,
+                },
                 { id: 'hero', label: 'Hero Carousel & Video', icon: ImageIcon },
                 { id: 'about', label: 'About Page Photos', icon: BookOpen },
                 { id: 'pricing', label: `Packages (${pricingPackages.length})`, icon: DollarSign },
@@ -619,7 +652,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                         Portfolio Works
                       </span>
                       <div className="text-2xl font-serif text-neutral-900 mt-1">
-                        {selectedWork.length}
+                        {preWeddingStories.length + weddingProjects.length + preWeddingVideos.length}
                       </div>
                     </div>
                     <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-xs">
@@ -666,12 +699,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                     <button
                       onClick={() => {
                         setActiveTab('portfolio');
-                        setNewWorkModal(true);
+                        setPortfolioSubTab('single');
+                        setNewPreWeddingStoryModal(true);
                       }}
                       className="inline-flex items-center gap-1.5 px-4 py-2 bg-neutral-900 text-white hover:bg-neutral-800 text-xs tracking-wider uppercase rounded-xs transition-colors cursor-pointer"
                     >
                       <Plus size={13} />
-                      <span>Upload New Photo</span>
+                      <span>Add Pre-Wedding Story</span>
                     </button>
                     <button
                       onClick={() => {
@@ -758,7 +792,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                         <Plus size={14} />
                         <span>Add Wedding Project</span>
                       </button>
-                    ) : (
+                    ) : portfolioSubTab === 'videos' ? (
                       <button
                         id="admin-add-video-btn"
                         onClick={() => {
@@ -779,7 +813,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                         <Plus size={14} />
                         <span>Add Pre-Wedding Video</span>
                       </button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
@@ -826,6 +860,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                     <span>Pre-Wedding Videos</span>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
                       {preWeddingVideos.length}
+                    </span>
+                  </button>
+
+                  <button
+                    id="admin-subtab-selected-work"
+                    onClick={() => setPortfolioSubTab('selected')}
+                    className={`pb-3 text-xs tracking-wider uppercase font-medium border-b-2 -mb-px transition-colors cursor-pointer flex items-center gap-2 shrink-0 ${
+                      portfolioSubTab === 'selected'
+                        ? 'border-neutral-900 text-neutral-900 font-semibold'
+                        : 'border-transparent text-neutral-400 hover:text-neutral-700'
+                    }`}
+                  >
+                    <Star size={13} className={portfolioSubTab === 'selected' ? 'text-amber-500 fill-amber-400' : 'text-neutral-400'} />
+                    <span>Selected Work (Homepage Grid)</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-600">
+                      {weddingProjects.reduce((acc, p) => acc + (p.featuredImages?.length || 0), 0) +
+                        preWeddingStories.reduce((acc, s) => acc + (s.featuredImages?.length || 0), 0)}
                     </span>
                   </button>
                 </div>
@@ -1193,6 +1244,290 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                     )}
                   </div>
                 )}
+
+                {/* View 4: Selected Work Grid (Featured Images from Stories Sequence & Hierarchy) */}
+                {portfolioSubTab === 'selected' && (() => {
+                  // Collect all featured images from Wedding Projects & Pre-Wedding Stories
+                  interface FeaturedStoryImage {
+                    key: string;
+                    url: string;
+                    storyType: 'wedding' | 'prewedding';
+                    storyId: string;
+                    storyTitle: string;
+                    framingX: number;
+                    framingY: number;
+                  }
+
+                  const featuredList: FeaturedStoryImage[] = [];
+
+                  weddingProjects.forEach((proj) => {
+                    const feat = proj.featuredImages || [];
+                    feat.forEach((url) => {
+                      const framing = proj.photoFraming?.[url];
+                      featuredList.push({
+                        key: `wedding_${proj.id}_${url}`,
+                        url,
+                        storyType: 'wedding',
+                        storyId: proj.id,
+                        storyTitle: proj.coupleNames || proj.title,
+                        framingX: framing?.x ?? 50,
+                        framingY: framing?.y ?? 50,
+                      });
+                    });
+                  });
+
+                  preWeddingStories.forEach((story) => {
+                    const feat = story.featuredImages || [];
+                    feat.forEach((url) => {
+                      const framing = story.photoFraming?.[url];
+                      featuredList.push({
+                        key: `prewedding_${story.id}_${url}`,
+                        url,
+                        storyType: 'prewedding',
+                        storyId: story.id,
+                        storyTitle: story.coupleNames || story.title,
+                        framingX: framing?.x ?? 50,
+                        framingY: framing?.y ?? 50,
+                      });
+                    });
+                  });
+
+                  // Sort according to homepageSelectedOrder
+                  const sortedFeatured = [...featuredList].sort((a, b) => {
+                    const idxA = homepageSelectedOrder.indexOf(a.url);
+                    const idxB = homepageSelectedOrder.indexOf(b.url);
+                    const rankA = idxA !== -1 ? idxA : 9999;
+                    const rankB = idxB !== -1 ? idxB : 9999;
+                    return rankA - rankB;
+                  });
+
+                  // Helper to update full sequence
+                  const handleReorder = async (newList: FeaturedStoryImage[]) => {
+                    const newOrderUrls = newList.map((item) => item.url);
+                    await updateHomepageSelectedOrder(newOrderUrls);
+                  };
+
+                  // Helper to unfeature an image directly from its parent story
+                  const handleUnfeature = async (item: FeaturedStoryImage) => {
+                    if (item.storyType === 'wedding') {
+                      const proj = weddingProjects.find((p) => p.id === item.storyId);
+                      if (proj) {
+                        const updatedFeat = (proj.featuredImages || []).filter((u) => u !== item.url);
+                        await updateWeddingProject({ ...proj, featuredImages: updatedFeat });
+                        showToast(`Removed photo from Homepage Selected Work.`);
+                      }
+                    } else {
+                      const story = preWeddingStories.find((s) => s.id === item.storyId);
+                      if (story) {
+                        const updatedFeat = (story.featuredImages || []).filter((u) => u !== item.url);
+                        await updatePreWeddingStory({ ...story, featuredImages: updatedFeat });
+                        showToast(`Removed photo from Homepage Selected Work.`);
+                      }
+                    }
+                  };
+
+                  return (
+                    <div className="space-y-4">
+                      <div className="bg-neutral-50/70 border border-neutral-200 p-4 rounded-xs flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <h3 className="font-serif text-base text-neutral-900 font-medium">
+                            Homepage Selected Work Hierarchy
+                          </h3>
+                          <p className="text-xs text-neutral-500">
+                            Reorder the featured photographs chosen from Wedding Stories and Pre-Wedding Stories. Photos with lower order appear first on the homepage.
+                          </p>
+                        </div>
+                        <div className="text-xs font-mono text-neutral-600 bg-white px-2.5 py-1 border border-neutral-200 rounded-xs">
+                          {sortedFeatured.length} featured {sortedFeatured.length === 1 ? 'photo' : 'photos'}
+                        </div>
+                      </div>
+
+                      {sortedFeatured.length === 0 ? (
+                        <div className="bg-white border border-neutral-200 p-12 text-center rounded-xs space-y-3">
+                          <Star size={32} className="mx-auto text-neutral-300 stroke-1" />
+                          <h4 className="font-serif text-base text-neutral-800">No Featured Photos Selected Yet</h4>
+                          <p className="text-xs text-neutral-500 max-w-md mx-auto leading-relaxed">
+                            To feature photos here, open any <strong>Wedding Project (Story)</strong> or <strong>Pre-Wedding Story</strong> above, edit it, and click the star icon (<Star size={11} className="inline fill-amber-400 text-amber-500" />) on the photos you want displayed on the homepage.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                          {sortedFeatured.map((item, idx) => (
+                            <div
+                              key={item.key}
+                              className="bg-white border border-neutral-200 rounded-xs overflow-hidden shadow-xs flex flex-col justify-between"
+                            >
+                              <div>
+                                <div className="aspect-[4/5] bg-neutral-900 relative overflow-hidden group">
+                                  <img
+                                    src={getOptimizedCloudinaryUrl(item.url, { width: 500 })}
+                                    alt={item.storyTitle}
+                                    loading="lazy"
+                                    decoding="async"
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover',
+                                      objectPosition: `${item.framingX}% ${item.framingY}%`,
+                                    }}
+                                    className="transition-transform duration-500 group-hover:scale-105"
+                                  />
+                                  <div className="absolute top-2 left-2 bg-black/75 backdrop-blur-xs text-white text-[10px] font-mono px-2 py-0.5 rounded-xs flex items-center gap-1">
+                                    <span>#{idx + 1}</span>
+                                  </div>
+                                  <div className="absolute top-2 right-2 bg-amber-400 text-neutral-950 text-[9px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-xs flex items-center gap-1 shadow-xs">
+                                    <Star size={10} className="fill-neutral-950" />
+                                    <span>Featured</span>
+                                  </div>
+                                </div>
+
+                                <div className="p-4 space-y-1">
+                                  <span className="text-[10px] tracking-wider uppercase text-neutral-400 block font-medium">
+                                    {item.storyType === 'wedding' ? 'Wedding Story' : 'Pre-Wedding Story'}
+                                  </span>
+                                  <h4 className="font-serif text-base text-neutral-900 font-medium truncate" title={item.storyTitle}>
+                                    {item.storyTitle}
+                                  </h4>
+                                </div>
+                              </div>
+
+                              <div className="p-4 pt-0 space-y-2.5">
+                                {/* Sequence / Order Controls */}
+                                <div className="flex items-center justify-between p-1.5 bg-neutral-50 border border-neutral-200 rounded-xs">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-medium">Order:</span>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={sortedFeatured.length}
+                                      value={idx + 1}
+                                      onChange={async (e) => {
+                                        const targetIndex = parseInt(e.target.value, 10) - 1;
+                                        if (!isNaN(targetIndex) && targetIndex >= 0 && targetIndex < sortedFeatured.length && targetIndex !== idx) {
+                                          const nextArr = [...sortedFeatured];
+                                          const [movedItem] = nextArr.splice(idx, 1);
+                                          nextArr.splice(targetIndex, 0, movedItem);
+                                          await handleReorder(nextArr);
+                                        }
+                                      }}
+                                      className="w-12 px-1.5 py-0.5 text-xs text-center border border-neutral-300 rounded-xs bg-white text-neutral-900 font-mono outline-none focus:border-neutral-900"
+                                      title="Direct numeric display order"
+                                    />
+                                  </div>
+
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      disabled={idx === 0}
+                                      onClick={async () => {
+                                        if (idx === 0) return;
+                                        const nextArr = [...sortedFeatured];
+                                        const temp = nextArr[idx];
+                                        nextArr[idx] = nextArr[idx - 1];
+                                        nextArr[idx - 1] = temp;
+                                        await handleReorder(nextArr);
+                                        showToast(`Moved "${item.storyTitle}" photo up.`);
+                                      }}
+                                      className="p-1 hover:bg-neutral-200 rounded-xs text-neutral-600 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors"
+                                      title="Move Up"
+                                    >
+                                      <ArrowUp size={13} />
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      disabled={idx === sortedFeatured.length - 1}
+                                      onClick={async () => {
+                                        if (idx === sortedFeatured.length - 1) return;
+                                        const nextArr = [...sortedFeatured];
+                                        const temp = nextArr[idx];
+                                        nextArr[idx] = nextArr[idx + 1];
+                                        nextArr[idx + 1] = temp;
+                                        await handleReorder(nextArr);
+                                        showToast(`Moved "${item.storyTitle}" photo down.`);
+                                      }}
+                                      className="p-1 hover:bg-neutral-200 rounded-xs text-neutral-600 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors"
+                                      title="Move Down"
+                                    >
+                                      <ArrowDown size={13} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  {/* Framing editor button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFramingModalState({
+                                        isOpen: true,
+                                        imageUrl: item.url,
+                                        title: `Adjust Framing · ${item.storyTitle}`,
+                                        initialX: item.framingX,
+                                        initialY: item.framingY,
+                                        onApply: async (fx, fy) => {
+                                          if (item.storyType === 'wedding') {
+                                            const proj = weddingProjects.find((p) => p.id === item.storyId);
+                                            if (proj) {
+                                              await updateWeddingProject({
+                                                ...proj,
+                                                photoFraming: {
+                                                  ...(proj.photoFraming || {}),
+                                                  [item.url]: { x: fx, y: fy },
+                                                },
+                                              });
+                                            }
+                                          } else {
+                                            const story = preWeddingStories.find((s) => s.id === item.storyId);
+                                            if (story) {
+                                              await updatePreWeddingStory({
+                                                ...story,
+                                                photoFraming: {
+                                                  ...(story.photoFraming || {}),
+                                                  [item.url]: { x: fx, y: fy },
+                                                },
+                                              });
+                                            }
+                                          }
+                                          setFramingModalState((s) => ({ ...s, isOpen: false }));
+                                          showToast('Visual framing updated.');
+                                        },
+                                      });
+                                    }}
+                                    className="flex-1 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xs text-xs flex items-center justify-center gap-1 cursor-pointer"
+                                    title="Adjust visual crop focal point"
+                                  >
+                                    <Crop size={12} />
+                                    <span>Adjust Framing</span>
+                                  </button>
+
+                                  {/* Unfeature button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      requestDeleteConfirm(
+                                        'Unfeature Photo',
+                                        `Are you sure you want to remove this featured photo from "${item.storyTitle}" from the Homepage Selected Work? The photo will remain inside its story gallery.`,
+                                        async () => {
+                                          await handleUnfeature(item);
+                                        },
+                                        'Remove'
+                                      );
+                                    }}
+                                    className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xs text-xs flex items-center justify-center cursor-pointer shrink-0"
+                                    title="Unfeature from Homepage Selected Work"
+                                  >
+                                    <StarOff size={13} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -1724,13 +2059,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {teamMembers.map((member) => (
+                  {[...teamMembers]
+                    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+                    .map((member, idx, sortedArr) => (
                     <div
                       key={member.id}
                       className="bg-white border border-neutral-200 rounded-xs overflow-hidden shadow-xs flex flex-col justify-between"
                     >
                       <div>
-                        <div className="aspect-[4/5] bg-neutral-900 overflow-hidden flex items-center justify-center">
+                        <div className="aspect-[4/5] bg-neutral-900 overflow-hidden flex items-center justify-center relative group">
                           <img
                             src={getOptimizedCloudinaryUrl(member.imageUrl, { width: 400 })}
                             alt={member.name}
@@ -1738,6 +2075,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                             decoding="async"
                             className="w-full h-full object-contain grayscale"
                           />
+                          <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-xs text-white text-[10px] font-mono px-2 py-0.5 rounded-xs flex items-center gap-1">
+                            <span>#{idx + 1}</span>
+                          </div>
                         </div>
                         <div className="p-4">
                           <span className="text-[10px] tracking-wider uppercase text-neutral-400">
@@ -1752,28 +2092,102 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                         </div>
                       </div>
 
-                      <div className="p-4 pt-0 flex gap-2">
-                        <button
-                          onClick={() => setEditingTeamMember({ ...member })}
-                          className="flex-1 py-1.5 text-center text-xs text-neutral-700 hover:bg-neutral-100 border border-neutral-200 rounded-xs uppercase tracking-wider cursor-pointer"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => {
-                            requestDeleteConfirm(
-                              'Remove Team Member',
-                              `Are you sure you want to remove artisan "${member.name}"?`,
-                              async () => {
-                                await deleteTeamMember(member.id);
-                                showToast('Member removed.');
-                              }
-                            );
-                          }}
-                          className="py-1.5 px-3 text-center text-xs text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xs uppercase tracking-wider cursor-pointer"
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                      <div className="p-4 pt-0 space-y-2.5">
+                        {/* Sequence / Order Controls */}
+                        <div className="flex items-center justify-between p-1.5 bg-neutral-50 border border-neutral-200 rounded-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-medium">Order:</span>
+                            <input
+                              type="number"
+                              value={member.displayOrder ?? idx}
+                              onChange={async (e) => {
+                                const newOrder = parseInt(e.target.value, 10);
+                                if (!isNaN(newOrder)) {
+                                  const updatedMember = { ...member, displayOrder: newOrder };
+                                  await updateTeamMember(updatedMember);
+                                }
+                              }}
+                              className="w-12 px-1.5 py-0.5 text-xs text-center border border-neutral-300 rounded-xs bg-white text-neutral-900 font-mono outline-none focus:border-neutral-900"
+                              title="Direct numeric display order"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={async () => {
+                                if (idx === 0) return;
+                                const prevMember = sortedArr[idx - 1];
+                                const currentOrder = member.displayOrder ?? idx;
+                                const prevOrder = prevMember.displayOrder ?? (idx - 1);
+                                // Swap orders
+                                const newCurrentOrder = prevOrder;
+                                const newPrevOrder = currentOrder === prevOrder ? currentOrder + 1 : currentOrder;
+                                const reordered = sortedArr.map((m, i) => {
+                                  if (m.id === member.id) return { ...m, displayOrder: newCurrentOrder };
+                                  if (m.id === prevMember.id) return { ...m, displayOrder: newPrevOrder };
+                                  return { ...m, displayOrder: m.displayOrder ?? i };
+                                });
+                                await updateTeamMembersOrder(reordered);
+                                showToast(`Moved ${member.name} up.`);
+                              }}
+                              className="p-1 hover:bg-neutral-200 rounded-xs text-neutral-600 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors"
+                              title="Move Up"
+                            >
+                              <ArrowUp size={13} />
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={idx === sortedArr.length - 1}
+                              onClick={async () => {
+                                if (idx === sortedArr.length - 1) return;
+                                const nextMember = sortedArr[idx + 1];
+                                const currentOrder = member.displayOrder ?? idx;
+                                const nextOrder = nextMember.displayOrder ?? (idx + 1);
+                                // Swap orders
+                                const newCurrentOrder = nextOrder;
+                                const newNextOrder = currentOrder === nextOrder ? currentOrder - 1 : currentOrder;
+                                const reordered = sortedArr.map((m, i) => {
+                                  if (m.id === member.id) return { ...m, displayOrder: newCurrentOrder };
+                                  if (m.id === nextMember.id) return { ...m, displayOrder: newNextOrder };
+                                  return { ...m, displayOrder: m.displayOrder ?? i };
+                                });
+                                await updateTeamMembersOrder(reordered);
+                                showToast(`Moved ${member.name} down.`);
+                              }}
+                              className="p-1 hover:bg-neutral-200 rounded-xs text-neutral-600 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer transition-colors"
+                              title="Move Down"
+                            >
+                              <ArrowDown size={13} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setEditingTeamMember({ ...member })}
+                            className="flex-1 py-1.5 text-center text-xs text-neutral-700 hover:bg-neutral-100 border border-neutral-200 rounded-xs uppercase tracking-wider cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              requestDeleteConfirm(
+                                'Remove Team Member',
+                                `Are you sure you want to remove artisan "${member.name}"?`,
+                                async () => {
+                                  await deleteTeamMember(member.id);
+                                  showToast('Member removed.');
+                                }
+                              );
+                            }}
+                            className="py-1.5 px-3 text-center text-xs text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xs uppercase tracking-wider cursor-pointer"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -2599,6 +3013,38 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                 currentUrl={newProjectForm.coverImage}
                 onUploaded={(url) => setNewProjectForm({ ...newProjectForm, coverImage: url })}
               />
+              {newProjectForm.coverImage && (
+                <div className="flex items-center justify-between p-2 bg-neutral-50 border border-neutral-200 rounded-xs text-xs">
+                  <span className="text-neutral-600 text-[11px]">
+                    Cover Focal Framing: {newProjectForm.cover_position_x ?? 50}% X, {newProjectForm.cover_position_y ?? 50}% Y
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFramingModalState({
+                        isOpen: true,
+                        imageUrl: newProjectForm.coverImage,
+                        title: 'Adjust Project Cover Framing',
+                        initialX: newProjectForm.cover_position_x ?? 50,
+                        initialY: newProjectForm.cover_position_y ?? 50,
+                        onApply: (fx, fy) => {
+                          setNewProjectForm((prev) => ({
+                            ...prev,
+                            cover_position_x: fx,
+                            cover_position_y: fy,
+                          }));
+                          setFramingModalState((s) => ({ ...s, isOpen: false }));
+                          showToast('Cover framing applied.');
+                        },
+                      });
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xs text-[11px] font-medium cursor-pointer"
+                  >
+                    <Crop size={11} />
+                    <span>Adjust Cover Framing</span>
+                  </button>
+                </div>
+              )}
 
               {/* Multiple Gallery Photos for the Wedding Project */}
               <div className="pt-3 border-t border-neutral-100 space-y-3">
@@ -2678,6 +3124,38 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                           >
                             <Star size={11} className={isFeatured ? 'fill-neutral-950' : ''} />
                           </button>
+
+                          {/* Adjust Framing / Visual Crop button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentFraming = newProjectForm.photoFraming?.[imgUrl] || { x: 50, y: 50 };
+                              setFramingModalState({
+                                isOpen: true,
+                                imageUrl: imgUrl,
+                                title: `Adjust Framing · Photo #${idx + 1}`,
+                                initialX: currentFraming.x,
+                                initialY: currentFraming.y,
+                                onApply: (fx, fy) => {
+                                  setNewProjectForm((prev) => ({
+                                    ...prev,
+                                    photoFraming: {
+                                      ...(prev.photoFraming || {}),
+                                      [imgUrl]: { x: fx, y: fy },
+                                    },
+                                  }));
+                                  setFramingModalState((s) => ({ ...s, isOpen: false }));
+                                  showToast('Framing applied. Remember to click "Create Project" to save.');
+                                },
+                              });
+                            }}
+                            className="absolute bottom-1 left-1 bg-black/70 hover:bg-amber-400 hover:text-neutral-950 text-white p-1 rounded-full text-xs transition-colors cursor-pointer"
+                            title="Adjust Framing / Visual Crop"
+                          >
+                            <Crop size={10} />
+                          </button>
+
+                          {/* Remove Photo */}
                           <button
                             type="button"
                             onClick={() => {
@@ -2723,6 +3201,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                     description: newProjectForm.description,
                     images: newProjectForm.images.length > 0 ? newProjectForm.images : [newProjectForm.coverImage],
                     featuredImages: newProjectForm.featuredImages || [],
+                    photoFraming: newProjectForm.photoFraming || {},
                   };
                   await addWeddingProject(newProj);
                   setNewProjectModal(false);
@@ -2840,6 +3319,42 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                 currentUrl={editingProject.coverImage}
                 onUploaded={(url) => setEditingProject({ ...editingProject, coverImage: url })}
               />
+              {editingProject.coverImage && (
+                <div className="flex items-center justify-between p-2 bg-neutral-50 border border-neutral-200 rounded-xs text-xs">
+                  <span className="text-neutral-600 text-[11px]">
+                    Cover Focal Framing: {editingProject.cover_position_x ?? 50}% X, {editingProject.cover_position_y ?? 50}% Y
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFramingModalState({
+                        isOpen: true,
+                        imageUrl: editingProject.coverImage,
+                        title: 'Adjust Project Cover Framing',
+                        initialX: editingProject.cover_position_x ?? 50,
+                        initialY: editingProject.cover_position_y ?? 50,
+                        onApply: (fx, fy) => {
+                          setEditingProject((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  cover_position_x: fx,
+                                  cover_position_y: fy,
+                                }
+                              : prev
+                          );
+                          setFramingModalState((s) => ({ ...s, isOpen: false }));
+                          showToast('Cover framing applied. Click "Save Changes" to save.');
+                        },
+                      });
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xs text-[11px] font-medium cursor-pointer"
+                  >
+                    <Crop size={11} />
+                    <span>Adjust Cover Framing</span>
+                  </button>
+                </div>
+              )}
 
               {/* Additional Photos */}
               <div className="pt-3 border-t border-neutral-100 space-y-3">
@@ -2916,6 +3431,42 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                           >
                             <Star size={11} className={isFeatured ? 'fill-neutral-950' : ''} />
                           </button>
+
+                          {/* Adjust Framing / Visual Crop button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentFraming = editingProject.photoFraming?.[imgUrl] || { x: 50, y: 50 };
+                              setFramingModalState({
+                                isOpen: true,
+                                imageUrl: imgUrl,
+                                title: `Adjust Framing · Photo #${idx + 1}`,
+                                initialX: currentFraming.x,
+                                initialY: currentFraming.y,
+                                onApply: (fx, fy) => {
+                                  setEditingProject((prev) =>
+                                    prev
+                                      ? {
+                                          ...prev,
+                                          photoFraming: {
+                                            ...(prev.photoFraming || {}),
+                                            [imgUrl]: { x: fx, y: fy },
+                                          },
+                                        }
+                                      : prev
+                                  );
+                                  setFramingModalState((s) => ({ ...s, isOpen: false }));
+                                  showToast('Framing applied. Click "Save Changes" to save to database.');
+                                },
+                              });
+                            }}
+                            className="absolute bottom-1 left-1 bg-black/70 hover:bg-amber-400 hover:text-neutral-950 text-white p-1 rounded-full text-xs transition-colors cursor-pointer"
+                            title="Adjust Framing / Visual Crop"
+                          >
+                            <Crop size={10} />
+                          </button>
+
+                          {/* Remove Photo */}
                           <button
                             type="button"
                             onClick={() => {
@@ -3076,6 +3627,38 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                 currentUrl={newPreWeddingStoryForm.coverImage}
                 onUploaded={(url) => setNewPreWeddingStoryForm({ ...newPreWeddingStoryForm, coverImage: url })}
               />
+              {newPreWeddingStoryForm.coverImage && (
+                <div className="flex items-center justify-between p-2 bg-neutral-50 border border-neutral-200 rounded-xs text-xs">
+                  <span className="text-neutral-600 text-[11px]">
+                    Cover Focal Framing: {newPreWeddingStoryForm.cover_position_x ?? 50}% X, {newPreWeddingStoryForm.cover_position_y ?? 50}% Y
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFramingModalState({
+                        isOpen: true,
+                        imageUrl: newPreWeddingStoryForm.coverImage,
+                        title: 'Adjust Story Cover Framing',
+                        initialX: newPreWeddingStoryForm.cover_position_x ?? 50,
+                        initialY: newPreWeddingStoryForm.cover_position_y ?? 50,
+                        onApply: (fx, fy) => {
+                          setNewPreWeddingStoryForm((prev) => ({
+                            ...prev,
+                            cover_position_x: fx,
+                            cover_position_y: fy,
+                          }));
+                          setFramingModalState((s) => ({ ...s, isOpen: false }));
+                          showToast('Cover framing applied.');
+                        },
+                      });
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xs text-[11px] font-medium cursor-pointer"
+                  >
+                    <Crop size={11} />
+                    <span>Adjust Cover Framing</span>
+                  </button>
+                </div>
+              )}
 
               {/* Multiple Gallery Photos for the Pre-Wedding Story */}
               <div className="pt-3 border-t border-neutral-100 space-y-3">
@@ -3155,6 +3738,38 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                           >
                             <Star size={11} className={isFeatured ? 'fill-neutral-950' : ''} />
                           </button>
+
+                          {/* Adjust Framing / Visual Crop button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentFraming = newPreWeddingStoryForm.photoFraming?.[imgUrl] || { x: 50, y: 50 };
+                              setFramingModalState({
+                                isOpen: true,
+                                imageUrl: imgUrl,
+                                title: `Adjust Framing · Photo #${idx + 1}`,
+                                initialX: currentFraming.x,
+                                initialY: currentFraming.y,
+                                onApply: (fx, fy) => {
+                                  setNewPreWeddingStoryForm((prev) => ({
+                                    ...prev,
+                                    photoFraming: {
+                                      ...(prev.photoFraming || {}),
+                                      [imgUrl]: { x: fx, y: fy },
+                                    },
+                                  }));
+                                  setFramingModalState((s) => ({ ...s, isOpen: false }));
+                                  showToast('Framing applied. Remember to click "Create Story" to save.');
+                                },
+                              });
+                            }}
+                            className="absolute bottom-1 left-1 bg-black/70 hover:bg-amber-400 hover:text-neutral-950 text-white p-1 rounded-full text-xs transition-colors cursor-pointer"
+                            title="Adjust Framing / Visual Crop"
+                          >
+                            <Crop size={10} />
+                          </button>
+
+                          {/* Remove Photo */}
                           <button
                             type="button"
                             onClick={() => {
@@ -3200,6 +3815,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                     description: newPreWeddingStoryForm.description,
                     images: newPreWeddingStoryForm.images.length > 0 ? newPreWeddingStoryForm.images : [newPreWeddingStoryForm.coverImage],
                     featuredImages: newPreWeddingStoryForm.featuredImages || [],
+                    photoFraming: newPreWeddingStoryForm.photoFraming || {},
                   };
                   await addPreWeddingStory(newStory);
                   setNewPreWeddingStoryModal(false);
@@ -3317,6 +3933,42 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                 currentUrl={editingPreWeddingStory.coverImage}
                 onUploaded={(url) => setEditingPreWeddingStory({ ...editingPreWeddingStory, coverImage: url })}
               />
+              {editingPreWeddingStory.coverImage && (
+                <div className="flex items-center justify-between p-2 bg-neutral-50 border border-neutral-200 rounded-xs text-xs">
+                  <span className="text-neutral-600 text-[11px]">
+                    Cover Focal Framing: {editingPreWeddingStory.cover_position_x ?? 50}% X, {editingPreWeddingStory.cover_position_y ?? 50}% Y
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFramingModalState({
+                        isOpen: true,
+                        imageUrl: editingPreWeddingStory.coverImage,
+                        title: 'Adjust Story Cover Framing',
+                        initialX: editingPreWeddingStory.cover_position_x ?? 50,
+                        initialY: editingPreWeddingStory.cover_position_y ?? 50,
+                        onApply: (fx, fy) => {
+                          setEditingPreWeddingStory((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  cover_position_x: fx,
+                                  cover_position_y: fy,
+                                }
+                              : prev
+                          );
+                          setFramingModalState((s) => ({ ...s, isOpen: false }));
+                          showToast('Cover framing applied. Click "Save Changes" to save.');
+                        },
+                      });
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xs text-[11px] font-medium cursor-pointer"
+                  >
+                    <Crop size={11} />
+                    <span>Adjust Cover Framing</span>
+                  </button>
+                </div>
+              )}
 
               {/* Additional Photos */}
               <div className="pt-3 border-t border-neutral-100 space-y-3">
@@ -3393,6 +4045,42 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                           >
                             <Star size={11} className={isFeatured ? 'fill-neutral-950' : ''} />
                           </button>
+
+                          {/* Adjust Framing / Visual Crop button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentFraming = editingPreWeddingStory.photoFraming?.[imgUrl] || { x: 50, y: 50 };
+                              setFramingModalState({
+                                isOpen: true,
+                                imageUrl: imgUrl,
+                                title: `Adjust Framing · Photo #${idx + 1}`,
+                                initialX: currentFraming.x,
+                                initialY: currentFraming.y,
+                                onApply: (fx, fy) => {
+                                  setEditingPreWeddingStory((prev) =>
+                                    prev
+                                      ? {
+                                          ...prev,
+                                          photoFraming: {
+                                            ...(prev.photoFraming || {}),
+                                            [imgUrl]: { x: fx, y: fy },
+                                          },
+                                        }
+                                      : prev
+                                  );
+                                  setFramingModalState((s) => ({ ...s, isOpen: false }));
+                                  showToast('Framing applied. Click "Save Changes" to save to database.');
+                                },
+                              });
+                            }}
+                            className="absolute bottom-1 left-1 bg-black/70 hover:bg-amber-400 hover:text-neutral-950 text-white p-1 rounded-full text-xs transition-colors cursor-pointer"
+                            title="Adjust Framing / Visual Crop"
+                          >
+                            <Crop size={10} />
+                          </button>
+
+                          {/* Remove Photo */}
                           <button
                             type="button"
                             onClick={() => {
@@ -3799,27 +4487,43 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
-                  Category
-                </label>
-                <select
-                  value={newWorkForm.category}
-                  onChange={(e) =>
-                    setNewWorkForm({ ...newWorkForm, category: e.target.value })
-                  }
-                  className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
-                >
-                  <option value="Wedding Day">Wedding Day</option>
-                  <option value="Pre Wedding">Pre Wedding</option>
-                  <option value="Bridal Portrait">Bridal Portrait</option>
-                  <option value="Celebration">Celebration</option>
-                  <option value="Traditional Ceremony">Traditional Ceremony</option>
-                  <option value="Bridal Couture">Bridal Couture</option>
-                  <option value="Couple Portrait">Couple Portrait</option>
-                  <option value="Fine Art">Fine Art</option>
-                  <option value="Reception">Reception</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={newWorkForm.category}
+                    onChange={(e) =>
+                      setNewWorkForm({ ...newWorkForm, category: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  >
+                    <option value="Wedding Day">Wedding Day</option>
+                    <option value="Pre Wedding">Pre Wedding</option>
+                    <option value="Bridal Portrait">Bridal Portrait</option>
+                    <option value="Celebration">Celebration</option>
+                    <option value="Traditional Ceremony">Traditional Ceremony</option>
+                    <option value="Bridal Couture">Bridal Couture</option>
+                    <option value="Couple Portrait">Couple Portrait</option>
+                    <option value="Fine Art">Fine Art</option>
+                    <option value="Reception">Reception</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Display Order
+                  </label>
+                  <input
+                    type="number"
+                    value={newWorkForm.displayOrder ?? selectedWork.length}
+                    onChange={(e) =>
+                      setNewWorkForm({ ...newWorkForm, displayOrder: parseInt(e.target.value, 10) || 0 })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none font-mono"
+                    placeholder="0"
+                  />
+                </div>
               </div>
 
               <CloudinaryImageUpload
@@ -3828,6 +4532,56 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                 currentUrl={newWorkForm.imageUrl}
                 onUploaded={(url) => setNewWorkForm({ ...newWorkForm, imageUrl: url })}
               />
+
+              {newWorkForm.imageUrl && (
+                <div className="pt-2 flex items-center justify-between p-2.5 bg-neutral-50 border border-neutral-200 rounded-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-12 bg-neutral-900 rounded-xs overflow-hidden border border-neutral-300">
+                      <img
+                        src={getOptimizedCloudinaryUrl(newWorkForm.imageUrl, { width: 100 })}
+                        alt="Crop preview"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          objectPosition: `${newWorkForm.object_position_x ?? 50}% ${newWorkForm.object_position_y ?? 50}%`,
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-neutral-800 block">Visual Framing</span>
+                      <span className="text-[10px] text-neutral-500 font-mono">
+                        Focal Point: {newWorkForm.object_position_x ?? 50}% X, {newWorkForm.object_position_y ?? 50}% Y
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFramingModalState({
+                        isOpen: true,
+                        imageUrl: newWorkForm.imageUrl,
+                        title: 'Adjust Portfolio Photo Framing',
+                        initialX: newWorkForm.object_position_x ?? 50,
+                        initialY: newWorkForm.object_position_y ?? 50,
+                        onApply: (fx, fy) => {
+                          setNewWorkForm((prev) => ({
+                            ...prev,
+                            object_position_x: fx,
+                            object_position_y: fy,
+                          }));
+                          setFramingModalState((s) => ({ ...s, isOpen: false }));
+                          showToast('Framing updated.');
+                        },
+                      });
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xs text-xs uppercase tracking-wider font-medium cursor-pointer"
+                  >
+                    <Crop size={12} />
+                    <span>Adjust Framing</span>
+                  </button>
+                </div>
+              )}
 
               <div className="pt-2 border-t border-neutral-100">
                 <label className="inline-flex items-center gap-2 cursor-pointer select-none">
@@ -3910,27 +4664,42 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
-                  Category
-                </label>
-                <select
-                  value={editingWork.category}
-                  onChange={(e) =>
-                    setEditingWork({ ...editingWork, category: e.target.value })
-                  }
-                  className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
-                >
-                  <option value="Wedding Day">Wedding Day</option>
-                  <option value="Pre Wedding">Pre Wedding</option>
-                  <option value="Bridal Portrait">Bridal Portrait</option>
-                  <option value="Celebration">Celebration</option>
-                  <option value="Traditional Ceremony">Traditional Ceremony</option>
-                  <option value="Bridal Couture">Bridal Couture</option>
-                  <option value="Couple Portrait">Couple Portrait</option>
-                  <option value="Fine Art">Fine Art</option>
-                  <option value="Reception">Reception</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={editingWork.category}
+                    onChange={(e) =>
+                      setEditingWork({ ...editingWork, category: e.target.value })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  >
+                    <option value="Wedding Day">Wedding Day</option>
+                    <option value="Pre Wedding">Pre Wedding</option>
+                    <option value="Bridal Portrait">Bridal Portrait</option>
+                    <option value="Celebration">Celebration</option>
+                    <option value="Traditional Ceremony">Traditional Ceremony</option>
+                    <option value="Bridal Couture">Bridal Couture</option>
+                    <option value="Couple Portrait">Couple Portrait</option>
+                    <option value="Fine Art">Fine Art</option>
+                    <option value="Reception">Reception</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Display Order
+                  </label>
+                  <input
+                    type="number"
+                    value={editingWork.displayOrder ?? 0}
+                    onChange={(e) =>
+                      setEditingWork({ ...editingWork, displayOrder: parseInt(e.target.value, 10) || 0 })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none font-mono"
+                  />
+                </div>
               </div>
 
               <CloudinaryImageUpload
@@ -3939,6 +4708,60 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                 currentUrl={editingWork.imageUrl}
                 onUploaded={(url) => setEditingWork({ ...editingWork, imageUrl: url })}
               />
+
+              {editingWork.imageUrl && (
+                <div className="pt-2 flex items-center justify-between p-2.5 bg-neutral-50 border border-neutral-200 rounded-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-12 bg-neutral-900 rounded-xs overflow-hidden border border-neutral-300">
+                      <img
+                        src={getOptimizedCloudinaryUrl(editingWork.imageUrl, { width: 100 })}
+                        alt="Crop preview"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          objectPosition: `${editingWork.object_position_x ?? 50}% ${editingWork.object_position_y ?? 50}%`,
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-neutral-800 block">Visual Framing</span>
+                      <span className="text-[10px] text-neutral-500 font-mono">
+                        Focal Point: {editingWork.object_position_x ?? 50}% X, {editingWork.object_position_y ?? 50}% Y
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFramingModalState({
+                        isOpen: true,
+                        imageUrl: editingWork.imageUrl,
+                        title: `Adjust Framing · Photo #${editingWork.id}`,
+                        initialX: editingWork.object_position_x ?? 50,
+                        initialY: editingWork.object_position_y ?? 50,
+                        onApply: (fx, fy) => {
+                          setEditingWork((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  object_position_x: fx,
+                                  object_position_y: fy,
+                                }
+                              : prev
+                          );
+                          setFramingModalState((s) => ({ ...s, isOpen: false }));
+                          showToast('Framing updated. Click "Save Changes" to save.');
+                        },
+                      });
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xs text-xs uppercase tracking-wider font-medium cursor-pointer"
+                  >
+                    <Crop size={12} />
+                    <span>Adjust Framing</span>
+                  </button>
+                </div>
+              )}
 
               <div className="pt-2 border-t border-neutral-100">
                 <label className="inline-flex items-center gap-2 cursor-pointer select-none">
@@ -4498,7 +5321,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
             </div>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
                     Full Name
@@ -4529,6 +5352,19 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                       setNewTeamForm({ ...newTeamForm, role: e.target.value })
                     }
                     className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Display Order
+                  </label>
+                  <input
+                    type="number"
+                    value={newTeamForm.displayOrder ?? teamMembers.length}
+                    onChange={(e) =>
+                      setNewTeamForm({ ...newTeamForm, displayOrder: parseInt(e.target.value, 10) || 0 })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none font-mono"
                   />
                 </div>
               </div>
@@ -4599,7 +5435,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
             </div>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
                     Full Name
@@ -4624,6 +5460,19 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
                       setEditingTeamMember({ ...editingTeamMember, role: e.target.value })
                     }
                     className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs uppercase tracking-wider text-neutral-600 mb-1">
+                    Display Order
+                  </label>
+                  <input
+                    type="number"
+                    value={editingTeamMember.displayOrder ?? 0}
+                    onChange={(e) =>
+                      setEditingTeamMember({ ...editingTeamMember, displayOrder: parseInt(e.target.value, 10) || 0 })
+                    }
+                    className="w-full text-xs px-3 py-2 border border-neutral-300 rounded-xs focus:border-neutral-900 outline-none font-mono"
                   />
                 </div>
               </div>
@@ -5083,6 +5932,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ onNavigate }) => {
           setConfirmModalState((prev) => ({ ...prev, isOpen: false }));
         }}
         onClose={() => setConfirmModalState((prev) => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Interactive Individual Photo Visual Framing Editor Modal */}
+      <PhotoFramingModal
+        isOpen={framingModalState.isOpen}
+        imageUrl={framingModalState.imageUrl}
+        title={framingModalState.title}
+        initialX={framingModalState.initialX}
+        initialY={framingModalState.initialY}
+        onApply={(x, y) => {
+          framingModalState.onApply(x, y);
+        }}
+        onCancel={() => {
+          setFramingModalState((prev) => ({ ...prev, isOpen: false }));
+        }}
       />
     </div>
   );

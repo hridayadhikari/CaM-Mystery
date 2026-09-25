@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavPage } from '../types';
-import { Instagram, Facebook, Youtube } from 'lucide-react';
+import { Instagram, Facebook } from 'lucide-react';
 import { ScrollReveal } from './ScrollReveal';
 
 interface FooterProps {
@@ -18,7 +18,7 @@ export const Footer: React.FC<FooterProps> = () => {
         {/* Above: Social Icons */}
         <div className="flex items-center gap-2 sm:gap-3 text-neutral-400">
           <a
-            href="https://instagram.com"
+            href="https://www.instagram.com/cam.mystery/"
             target="_blank"
             rel="noopener noreferrer"
             className="p-1.5 hover:text-neutral-950 transition-colors"
@@ -28,7 +28,7 @@ export const Footer: React.FC<FooterProps> = () => {
             <Instagram size={16} />
           </a>
           <a
-            href="https://facebook.com"
+            href="https://www.facebook.com/people/CaM-Mystery/100064026484296/?locale=fy_NL"
             target="_blank"
             rel="noopener noreferrer"
             className="p-1.5 hover:text-neutral-950 transition-colors"
@@ -36,16 +36,6 @@ export const Footer: React.FC<FooterProps> = () => {
             title="Facebook"
           >
             <Facebook size={16} />
-          </a>
-          <a
-            href="https://youtube.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1.5 hover:text-neutral-950 transition-colors"
-            aria-label="YouTube"
-            title="YouTube"
-          >
-            <Youtube size={17} />
           </a>
         </div>
 

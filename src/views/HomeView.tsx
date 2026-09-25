@@ -18,7 +18,16 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onOpenVideo,
   onOpenProject,
 }) => {
-  const { heroSlides, selectedWork, testimonials, videoFeature, weddingProjects, preWeddingStories, aboutImages } = useCMS();
+  const {
+    heroSlides,
+    selectedWork,
+    testimonials,
+    videoFeature,
+    weddingProjects,
+    preWeddingStories,
+    aboutImages,
+    homepageSelectedOrder,
+  } = useCMS();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Auto advance hero slider every 6 seconds
@@ -122,12 +131,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
             weddingProjects.forEach((proj, pIdx) => {
               const featList = proj.featuredImages || [];
               featList.forEach((url, iIdx) => {
+                const framing = proj.photoFraming?.[url];
                 featuredFromWeddings.push({
                   id: 100000 + pIdx * 100 + iIdx,
                   title: proj.coupleNames || proj.title,
                   category: 'Wedding Story',
                   imageUrl: url,
                   isFeatured: true,
+                  object_position_x: framing?.x ?? 50,
+                  object_position_y: framing?.y ?? 50,
                 });
               });
             });
@@ -137,12 +149,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
             preWeddingStories.forEach((story, sIdx) => {
               const featList = story.featuredImages || [];
               featList.forEach((url, iIdx) => {
+                const framing = story.photoFraming?.[url];
                 featuredFromPreWeddings.push({
                   id: 200000 + sIdx * 100 + iIdx,
                   title: story.coupleNames || story.title,
                   category: 'Pre-Wedding Story',
                   imageUrl: url,
                   isFeatured: true,
+                  object_position_x: framing?.x ?? 50,
+                  object_position_y: framing?.y ?? 50,
                 });
               });
             });
@@ -150,16 +165,30 @@ export const HomeView: React.FC<HomeViewProps> = ({
             // 3. Featured items from selectedWork
             const featuredFromSelectedWork = selectedWork.filter((item) => item.isFeatured);
 
-            // Combine all featured
+            // Combine all featured and sort by homepageSelectedOrder sequence, then fallback
             const allFeatured = [
               ...featuredFromWeddings,
               ...featuredFromPreWeddings,
               ...featuredFromSelectedWork,
-            ];
+            ].sort((a, b) => {
+              const idxA = homepageSelectedOrder.indexOf(a.imageUrl);
+              const idxB = homepageSelectedOrder.indexOf(b.imageUrl);
+              const rankA = idxA !== -1 ? idxA : (a.displayOrder !== undefined ? a.displayOrder + 1000 : 9999);
+              const rankB = idxB !== -1 ? idxB : (b.displayOrder !== undefined ? b.displayOrder + 1000 : 9999);
+              return rankA - rankB;
+            });
+
+            const sortedSelectedWork = [...selectedWork].sort((a, b) => {
+              const idxA = homepageSelectedOrder.indexOf(a.imageUrl);
+              const idxB = homepageSelectedOrder.indexOf(b.imageUrl);
+              const rankA = idxA !== -1 ? idxA : (a.displayOrder !== undefined ? a.displayOrder : 9999);
+              const rankB = idxB !== -1 ? idxB : (b.displayOrder !== undefined ? b.displayOrder : 9999);
+              return rankA - rankB;
+            });
 
             const displayItems = allFeatured.length > 0
               ? allFeatured
-              : selectedWork.slice(0, 8);
+              : sortedSelectedWork.slice(0, 8);
 
             return displayItems.map((item, idx) => (
               <ScrollReveal
@@ -170,14 +199,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
               >
                   <div
                     onClick={() => onOpenLightbox(item, displayItems)}
-                    className="group relative aspect-[4/5] bg-neutral-100 overflow-hidden cursor-pointer"
+                    className="group relative aspect-[4/5] bg-neutral-100 overflow-hidden cursor-pointer rounded-xs"
                   >
                     <img
                       src={getOptimizedCloudinaryUrl(item.imageUrl, { width: 800 })}
                       srcSet={getCloudinarySrcSet(item.imageUrl, [400, 800, 1200])}
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 300px"
                       alt={item.title}
-                      className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105 filter brightness-[0.97]"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: `${item.object_position_x ?? 50}% ${item.object_position_y ?? 50}%`,
+                      }}
+                      className="transition-transform duration-700 ease-out group-hover:scale-105 filter brightness-[0.97]"
                       loading="lazy"
                       decoding="async"
                     />
@@ -469,7 +504,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <button
               id="cta-get-in-touch-btn"
               onClick={() => onNavigate('CONTACT')}
-              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-3.5 border border-white/70 text-white hover:bg-white hover:text-neutral-900 transition-all text-[11px] sm:text-xs tracking-[0.16em] sm:tracking-[0.22em] uppercase font-medium cursor-pointer"
+              className="inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-3.5 border border-white/70 text-white hover:bg-white hover:text-neutral-900 transition-all text-[11px] sm:text-xs tracking-[0.16em] sm:tracking-[0.22em] uppercase font-medium cursor-pointer rounded-xs"
             >
               <span>GET IN TOUCH</span>
               <span className="ml-2 font-sans text-xs sm:text-sm">→</span>

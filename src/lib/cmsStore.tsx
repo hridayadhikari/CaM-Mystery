@@ -60,8 +60,11 @@ interface CMSContextType {
   deletePreWeddingStory: (id: string) => Promise<void>;
 
   // Selected Work CRUD
+  homepageSelectedOrder: string[];
+  updateHomepageSelectedOrder: (order: string[]) => Promise<void>;
   addSelectedWork: (item: Omit<SelectedWorkItem, 'id'>) => Promise<void>;
   updateSelectedWork: (item: SelectedWorkItem) => Promise<void>;
+  updateSelectedWorkOrder: (items: SelectedWorkItem[]) => Promise<void>;
   deleteSelectedWork: (id: number) => Promise<void>;
 
   // Pricing Packages CRUD
@@ -72,6 +75,7 @@ interface CMSContextType {
   // Team Members CRUD
   addTeamMember: (member: TeamMember) => Promise<void>;
   updateTeamMember: (member: TeamMember) => Promise<void>;
+  updateTeamMembersOrder: (members: TeamMember[]) => Promise<void>;
   deleteTeamMember: (id: string) => Promise<void>;
 
   // Testimonials CRUD
@@ -127,7 +131,9 @@ const normalizeWorkItem = (row: any): SelectedWorkItem => ({
   imageUrl: row.imageUrl || row.imageurl || '',
   aspect: row.aspect || 'aspect-[4/5]',
   isFeatured: Boolean(row.isFeatured ?? row.isfeatured ?? false),
-  displayOrder: row.displayOrder ?? row.displayorder,
+  displayOrder: row.displayOrder !== undefined ? Number(row.displayOrder) : (row.displayorder !== undefined ? Number(row.displayorder) : (row.display_order !== undefined ? Number(row.display_order) : undefined)),
+  object_position_x: Number(row.object_position_x ?? row.objectpositionx ?? 50),
+  object_position_y: Number(row.object_position_y ?? row.objectpositiony ?? 50),
 });
 
 const normalizeTeamMember = (row: any): TeamMember => ({
@@ -137,6 +143,7 @@ const normalizeTeamMember = (row: any): TeamMember => ({
   bio: row.bio || '',
   imageUrl: row.imageUrl || row.imageurl || '',
   iconName: row.iconName || row.iconname || 'Camera',
+  displayOrder: Number(row.displayOrder ?? row.displayorder ?? row.display_order ?? 0),
 });
 
 const normalizeHeroSlide = (row: any): HeroSlide => ({
@@ -168,6 +175,13 @@ const normalizeWeddingProject = (row: any): WeddingProject => ({
   featuredImages: Array.isArray(row.featuredImages || row.featured_images)
     ? (row.featuredImages || row.featured_images)
     : [],
+  cover_position_x: Number(row.cover_position_x ?? row.coverpositionx ?? 50),
+  cover_position_y: Number(row.cover_position_y ?? row.coverpositiony ?? 50),
+  photoFraming: (typeof row.photoFraming === 'object' && row.photoFraming !== null)
+    ? row.photoFraming
+    : (typeof row.photo_framing === 'object' && row.photo_framing !== null)
+    ? row.photo_framing
+    : {},
 });
 
 const normalizeEnquiry = (row: any): EnquiryItem => ({
@@ -271,6 +285,9 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [preWeddingStories, setPreWeddingStories] = useState<PreWeddingStory[]>(() =>
     getLocal('pre_wedding_stories', []).map(normalizeWeddingProject)
   );
+  const [homepageSelectedOrder, setHomepageSelectedOrder] = useState<string[]>(() =>
+    getLocal('homepage_selected_order', [])
+  );
   const [preWeddingVideos, setPreWeddingVideos] = useState<PreWeddingVideo[]>(() =>
     getLocal('pre_wedding_videos', []).map(normalizePreWeddingVideo)
   );
@@ -319,6 +336,9 @@ export const CMSProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const normalized = row.value.map(normalizePreWeddingVideo);
             setPreWeddingVideos(normalized);
             setLocal('pre_wedding_videos', normalized);
+          } else if (row.key === 'homepage_selected_order' && Array.isArray(row.value)) {
+            setHomepageSelectedOrder(row.value);
+            setLocal('homepage_selected_order', row.value);
           }
         });
       }
@@ -546,6 +566,9 @@ const toDbPortfolio = (item: Partial<SelectedWorkItem>) => {
   if (item.imageUrl !== undefined) res.imageurl = item.imageUrl;
   if (item.aspect !== undefined) res.aspect = item.aspect;
   if (item.isFeatured !== undefined) res.isFeatured = item.isFeatured;
+  if (item.displayOrder !== undefined) res.display_order = item.displayOrder;
+  if (item.object_position_x !== undefined) res.object_position_x = item.object_position_x;
+  if (item.object_position_y !== undefined) res.object_position_y = item.object_position_y;
   return res;
 };
 
@@ -557,6 +580,7 @@ const toDbTeamMember = (item: Partial<TeamMember>) => {
   if (item.bio !== undefined) res.bio = item.bio;
   if (item.imageUrl !== undefined) res.imageurl = item.imageUrl;
   if (item.iconName !== undefined) res.iconname = item.iconName;
+  if (item.displayOrder !== undefined) res.display_order = item.displayOrder;
   return res;
 };
 
@@ -617,6 +641,9 @@ const toDbPreWeddingStory = (item: Partial<PreWeddingStory>) => {
   if (item.description !== undefined) res.description = item.description;
   if (item.images !== undefined) res.images = item.images;
   if (item.featuredImages !== undefined) res.featured_images = item.featuredImages;
+  if (item.cover_position_x !== undefined) res.cover_position_x = item.cover_position_x;
+  if (item.cover_position_y !== undefined) res.cover_position_y = item.cover_position_y;
+  if (item.photoFraming !== undefined) res.photo_framing = item.photoFraming;
   return res;
 };
 
@@ -716,6 +743,26 @@ const toDbPreWeddingStory = (item: Partial<PreWeddingStory>) => {
     await safeSupabaseWrite('portfolio', 'update', toDbPortfolio(item), 'id', item.id);
   };
 
+  const updateSelectedWorkOrder = async (items: SelectedWorkItem[]) => {
+    setSelectedWork(items);
+    setLocal('selected_work', items);
+    try {
+      await Promise.all(
+        items.map((item, index) =>
+          safeSupabaseWrite('portfolio', 'update', { display_order: item.displayOrder ?? index }, 'id', item.id)
+        )
+      );
+    } catch (err) {
+      console.warn('[CMS] updateSelectedWorkOrder batch error:', err);
+    }
+  };
+
+  const updateHomepageSelectedOrder = async (order: string[]) => {
+    setHomepageSelectedOrder(order);
+    setLocal('homepage_selected_order', order);
+    await safeSupabaseWrite('site_settings', 'upsert', { key: 'homepage_selected_order', value: order });
+  };
+
   const deleteSelectedWork = async (id: number) => {
     const updated = selectedWork.filter((w) => w.id !== id);
     setSelectedWork(updated);
@@ -758,6 +805,20 @@ const toDbPreWeddingStory = (item: Partial<PreWeddingStory>) => {
     setTeamMembers(updated);
     setLocal('team_members', updated);
     await safeSupabaseWrite('team_members', 'update', toDbTeamMember(member), 'id', member.id);
+  };
+
+  const updateTeamMembersOrder = async (members: TeamMember[]) => {
+    setTeamMembers(members);
+    setLocal('team_members', members);
+    try {
+      await Promise.all(
+        members.map((member, index) =>
+          safeSupabaseWrite('team_members', 'update', { display_order: member.displayOrder ?? index }, 'id', member.id)
+        )
+      );
+    } catch (err) {
+      console.warn('[CMS] updateTeamMembersOrder batch error:', err);
+    }
   };
 
   const deleteTeamMember = async (id: string) => {
@@ -1012,6 +1073,7 @@ const toDbPreWeddingStory = (item: Partial<PreWeddingStory>) => {
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'about_images');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'wedding_projects');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'pre_wedding_videos');
+    localStorage.removeItem(STORAGE_KEY_PREFIX + 'homepage_selected_order');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'enquiries');
     localStorage.removeItem(STORAGE_KEY_PREFIX + 'bookings');
     fetchAllFromDB();
@@ -1198,14 +1260,18 @@ const toDbPreWeddingStory = (item: Partial<PreWeddingStory>) => {
         addPreWeddingStory,
         updatePreWeddingStory,
         deletePreWeddingStory,
+        homepageSelectedOrder,
+        updateHomepageSelectedOrder,
         addSelectedWork,
         updateSelectedWork,
+        updateSelectedWorkOrder,
         deleteSelectedWork,
         addPricingPackage,
         updatePricingPackage,
         deletePricingPackage,
         addTeamMember,
         updateTeamMember,
+        updateTeamMembersOrder,
         deleteTeamMember,
         addTestimonial,
         updateTestimonial,

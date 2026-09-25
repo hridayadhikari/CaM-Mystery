@@ -27,13 +27,18 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
   const isPrewedding = storyType === 'prewedding';
 
   const projectGalleryItems: SelectedWorkItem[] = useMemo(() => {
-    return images.map((url, i) => ({
-      id: 888000 + i,
-      title: `${project.coupleNames} - Photo #${i + 1}`,
-      category: project.coupleNames,
-      imageUrl: url,
-    }));
-  }, [images, project.coupleNames]);
+    return images.map((url, i) => {
+      const framing = project.photoFraming?.[url];
+      return {
+        id: 888000 + i,
+        title: `${project.coupleNames} - Photo #${i + 1}`,
+        category: project.coupleNames,
+        imageUrl: url,
+        object_position_x: framing?.x ?? 50,
+        object_position_y: framing?.y ?? 50,
+      };
+    });
+  }, [images, project.coupleNames, project.photoFraming]);
 
   return (
     <div className="w-full bg-white text-neutral-900 animate-fadeIn">
@@ -56,13 +61,19 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
       </section>
 
       {/* 2. Panoramic Hero Story Banner */}
-      <section className="relative w-full aspect-[4/3] sm:aspect-[21/9] min-h-[340px] sm:min-h-[420px] max-h-[640px] bg-neutral-950 overflow-hidden shadow-sm">
+      <section className="relative w-full aspect-[4/3] sm:aspect-[21/9] min-h-[340px] sm:min-h-[420px] max-h-[640px] bg-neutral-950 overflow-hidden shadow-sm !rounded-none">
         <img
           src={getOptimizedCloudinaryUrl(project.coverImage, { width: 1600 })}
           srcSet={getCloudinarySrcSet(project.coverImage, [800, 1200, 1600, 2000])}
           sizes="100vw"
           alt={project.coupleNames}
-          className="w-full h-full object-cover object-top filter brightness-[0.88] contrast-[1.05]"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: `${project.cover_position_x ?? 50}% ${project.cover_position_y ?? 50}%`,
+          }}
+          className="filter brightness-[0.88] contrast-[1.05]"
           loading="eager"
           decoding="sync"
         />
@@ -150,7 +161,13 @@ export const WeddingProjectDetailView: React.FC<WeddingProjectDetailViewProps> =
                   srcSet={getCloudinarySrcSet(imgUrl, [400, 800, 1200])}
                   sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 380px"
                   alt={`${project.coupleNames} photograph ${idx + 1}`}
-                  className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: `${project.photoFraming?.[imgUrl]?.x ?? 50}% ${project.photoFraming?.[imgUrl]?.y ?? 50}%`,
+                  }}
+                  className="transition-transform duration-700 group-hover:scale-105"
                   loading="lazy"
                   decoding="async"
                 />

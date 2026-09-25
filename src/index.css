@@ -3,6 +3,8 @@
 @theme {
   --font-serif: "Cormorant Garamond", Georgia, Cambria, serif;
   --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --radius-xs: 2%;
+  --radius-sm: 2%;
 }
 
 @layer base {
@@ -17,6 +19,16 @@
 
   button {
     white-space: nowrap;
+    border-radius: 2%;
   }
 }
+
+/* Ensure all cards, badges, and components styled with rounded-xs or rounded-sm use 2% border-radius */
+.rounded-xs,
+.rounded-sm {
+  border-radius: 2% !important;
+}
+
+
+
 

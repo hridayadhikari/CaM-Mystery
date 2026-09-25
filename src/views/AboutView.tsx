@@ -65,7 +65,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
 
           {/* Right: Tall Portrait Image */}
           <ScrollReveal distance={20} delay={0.15} duration={0.7} className="lg:col-span-5 sticky top-28">
-            <div className="aspect-[3/4] sm:aspect-[4/5] lg:aspect-[3/4.2] bg-neutral-100 overflow-hidden shadow-sm">
+            <div className="aspect-[3/4] sm:aspect-[4/5] lg:aspect-[3/4.2] bg-neutral-100 overflow-hidden shadow-sm rounded-xs">
               <img
                 key={aboutImages.storyPortrait}
                 src={getOptimizedCloudinaryUrl(aboutImages.storyPortrait, { width: 1000 })}
@@ -93,7 +93,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 sm:gap-12">
             {/* Column 1: INTIMATE */}
             <ScrollReveal distance={16} delay={0} duration={0.6} className="space-y-6">
-              <div className="aspect-[4/5] bg-neutral-100 overflow-hidden">
+              <div className="aspect-[4/5] bg-neutral-100 overflow-hidden rounded-xs">
                 <img
                   key={aboutImages.howWeWork1}
                   src={getOptimizedCloudinaryUrl(aboutImages.howWeWork1, { width: 800 })}
@@ -119,7 +119,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
 
             {/* Column 2: INTENTIONAL */}
             <ScrollReveal distance={16} delay={0.12} duration={0.6} className="space-y-6">
-              <div className="aspect-[4/5] bg-neutral-100 overflow-hidden">
+              <div className="aspect-[4/5] bg-neutral-100 overflow-hidden rounded-xs">
                 <img
                   key={aboutImages.howWeWork2}
                   src={getOptimizedCloudinaryUrl(aboutImages.howWeWork2, { width: 800 })}
@@ -145,7 +145,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
 
             {/* Column 3: ETERNAL */}
             <ScrollReveal distance={16} delay={0.24} duration={0.6} className="space-y-6">
-              <div className="aspect-[4/5] bg-neutral-100 overflow-hidden">
+              <div className="aspect-[4/5] bg-neutral-100 overflow-hidden rounded-xs">
                 <img
                   key={aboutImages.howWeWork3}
                   src={getOptimizedCloudinaryUrl(aboutImages.howWeWork3, { width: 800 })}

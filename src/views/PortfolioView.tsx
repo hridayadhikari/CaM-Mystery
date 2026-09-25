@@ -156,7 +156,13 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                         srcSet={getCloudinarySrcSet(story.coverImage, [400, 800, 1200])}
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
                         alt={story.coupleNames}
-                        className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          objectPosition: `${story.cover_position_x ?? 50}% ${story.cover_position_y ?? 50}%`,
+                        }}
+                        className="group-hover:scale-105 transition-transform duration-700"
                         loading="lazy"
                         decoding="async"
                       />
@@ -256,7 +262,13 @@ export const PortfolioView: React.FC<PortfolioViewProps> = ({
                         srcSet={getCloudinarySrcSet(project.coverImage, [400, 800, 1200])}
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
                         alt={project.coupleNames}
-                        className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          objectPosition: `${project.cover_position_x ?? 50}% ${project.cover_position_y ?? 50}%`,
+                        }}
+                        className="group-hover:scale-105 transition-transform duration-700"
                         loading="lazy"
                         decoding="async"
                       />

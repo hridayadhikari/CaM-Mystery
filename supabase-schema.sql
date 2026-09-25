@@ -21,11 +21,17 @@ CREATE TABLE IF NOT EXISTS public.portfolio (
     imageUrl TEXT NOT NULL,
     aspect TEXT,
     "isFeatured" BOOLEAN DEFAULT false,
+    object_position_x INTEGER DEFAULT 50,
+    object_position_y INTEGER DEFAULT 50,
+    display_order INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Migration safety: add isFeatured column if portfolio table already exists
+-- Migration safety: add isFeatured, object_position_x, object_position_y, and display_order if portfolio table already exists
 ALTER TABLE public.portfolio ADD COLUMN IF NOT EXISTS "isFeatured" BOOLEAN DEFAULT false;
+ALTER TABLE public.portfolio ADD COLUMN IF NOT EXISTS object_position_x INTEGER DEFAULT 50;
+ALTER TABLE public.portfolio ADD COLUMN IF NOT EXISTS object_position_y INTEGER DEFAULT 50;
+ALTER TABLE public.portfolio ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0;
 
 -- 3. PRICING PACKAGES TABLE
 CREATE TABLE IF NOT EXISTS public.pricing_packages (
@@ -47,8 +53,12 @@ CREATE TABLE IF NOT EXISTS public.team_members (
     bio TEXT NOT NULL,
     imageUrl TEXT NOT NULL,
     iconName TEXT DEFAULT 'Camera',
+    display_order INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Migration safety: add display_order to team_members if already exists
+ALTER TABLE public.team_members ADD COLUMN IF NOT EXISTS display_order INTEGER DEFAULT 0;
 
 -- 5. TESTIMONIALS TABLE
 CREATE TABLE IF NOT EXISTS public.testimonials (

@@ -56,6 +56,7 @@ export interface TeamMember {
   bio: string;
   imageUrl: string;
   iconName?: 'Camera' | 'Film' | 'Eye' | 'Sparkles';
+  displayOrder?: number;
 }
 
 export interface PricingPackage {
@@ -88,6 +89,8 @@ export interface SelectedWorkItem {
   aspect?: string;
   isFeatured?: boolean;
   displayOrder?: number;
+  object_position_x?: number;
+  object_position_y?: number;
 }
 
 export interface WeddingProject {
@@ -100,6 +103,9 @@ export interface WeddingProject {
   description?: string;
   images: string[];
   featuredImages?: string[];
+  cover_position_x?: number;
+  cover_position_y?: number;
+  photoFraming?: Record<string, { x: number; y: number }>;
 }
 
 export type PreWeddingStory = WeddingProject;

@@ -96,7 +96,7 @@ export const CloudinaryImageUpload: React.FC<CloudinaryImageUploadProps> = ({
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
         {/* Preview Box (optional) */}
         {!hidePreview && (
-          <div className="relative w-24 h-24 sm:w-28 sm:h-28 bg-neutral-100 border border-neutral-200 rounded-sm overflow-hidden shrink-0 flex items-center justify-center group shadow-xs">
+          <div className="relative w-24 h-24 sm:w-28 sm:h-28 bg-neutral-100 border border-neutral-200 rounded-xs overflow-hidden shrink-0 flex items-center justify-center group shadow-xs">
             {preview ? (
               <img
                 src={getOptimizedCloudinaryUrl(preview, { width: 300 })}

@@ -127,7 +127,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
           decoding="async"
           alt={currentDisplayItem.title}
-          className="max-h-[75vh] w-auto max-w-full object-contain rounded-sm shadow-2xl transition-all duration-300"
+          className="max-h-[75vh] w-auto max-w-full object-contain rounded-xs shadow-2xl transition-all duration-300"
         />
         <div className="mt-4 text-center text-white">
           <div className="flex items-center justify-center gap-2 text-xs uppercase tracking-[0.25em] text-neutral-400">

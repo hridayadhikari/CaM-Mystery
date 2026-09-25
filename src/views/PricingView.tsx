@@ -44,7 +44,7 @@ export const PricingView: React.FC<PricingViewProps> = ({ onNavigate }) => {
                 className="flex"
               >
                 <div
-                  className={`w-full flex flex-col justify-between p-5 sm:p-6 md:p-7 border transition-all duration-300 relative bg-white text-neutral-900 ${
+                  className={`w-full flex flex-col justify-between p-5 sm:p-6 md:p-7 border rounded-xs transition-all duration-300 relative bg-white text-neutral-900 ${
                     isPopular
                       ? 'border-2 border-neutral-900 shadow-md'
                       : 'border-neutral-200 hover:border-neutral-400'

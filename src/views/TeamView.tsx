@@ -41,7 +41,9 @@ export const TeamView: React.FC<TeamViewProps> = ({ onNavigate }) => {
       {/* 2. Team Grid */}
       <section className="pb-28 px-6 sm:px-10 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {teamMembers.map((member, idx) => {
+          {[...teamMembers]
+            .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+            .map((member, idx) => {
             const Icon = (member.iconName && iconMap[member.iconName]) || Camera;
             return (
               <ScrollReveal
@@ -51,7 +53,7 @@ export const TeamView: React.FC<TeamViewProps> = ({ onNavigate }) => {
                 duration={0.6}
                 className="space-y-4 text-center sm:text-left"
               >
-                <div className="aspect-[4/5] bg-neutral-100 overflow-hidden shadow-sm">
+                <div className="aspect-[4/5] bg-neutral-100 overflow-hidden shadow-sm rounded-xs">
                   <img
                     src={getOptimizedCloudinaryUrl(member.imageUrl, { width: 600 })}
                     srcSet={getCloudinarySrcSet(member.imageUrl, [300, 600, 900])}
