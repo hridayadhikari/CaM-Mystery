@@ -34,8 +34,9 @@ export const PricingView: React.FC<PricingViewProps> = ({ onNavigate }) => {
       {/* 2. Three Pricing Cards */}
       <section className="pb-16 sm:pb-20 px-4 sm:px-8 max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch pt-2">
-          {pricingPackages.map((pkg, idx) => {
+          {(pricingPackages || []).map((pkg, idx) => {
             const isPopular = pkg.isPopular;
+            const features = Array.isArray(pkg.features) ? pkg.features : [];
             return (
               <ScrollReveal
                 key={pkg.id}
@@ -73,7 +74,7 @@ export const PricingView: React.FC<PricingViewProps> = ({ onNavigate }) => {
 
                     {/* Features list */}
                     <ul className="py-4 space-y-2.5 text-xs text-neutral-600 font-sans">
-                      {pkg.features.map((feature, fIdx) => (
+                      {features.map((feature, fIdx) => (
                         <li key={fIdx} className="flex items-start space-x-2.5">
                           <Check size={13} className="text-neutral-900 mt-0.5 shrink-0" />
                           <span className="leading-snug text-[11.5px] sm:text-xs">{feature}</span>
