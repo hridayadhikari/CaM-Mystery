@@ -58,7 +58,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
       closedByPopstateRef.current = true;
       onCloseRef.current();
     };
-
+//help
     window.addEventListener('popstate', handlePopState);
 
     return () => {
