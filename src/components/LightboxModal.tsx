@@ -16,23 +16,25 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   onClose,
   onSelect,
 }) => {
-  if (!item) return null;
+  const closedByPopstateRef = useRef(false);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
 
   // Active pool of items - fallback to current item if list is empty
-  const activeList = items && items.length > 0 ? items : [item];
+  const activeList = items && items.length > 0 ? items : item ? [item] : [];
 
   // Helper to find index in active list
-  const findItemIndex = (target: SelectedWorkItem) => {
-    const idx = activeList.findIndex((i) => i.id === target.id || i.imageUrl === target.imageUrl);
-    return idx >= 0 ? idx : 0;
-  };
+  const currentIndex = item
+    ? Math.max(
+        0,
+        activeList.findIndex((i) => i.id === item.id || i.imageUrl === item.imageUrl)
+      )
+    : 0;
 
-  const [currentIndex, setCurrentIndex] = useState<number>(() => findItemIndex(item));
-
-  // Sync index whenever item or activeList changes
-  useEffect(() => {
-    setCurrentIndex(findItemIndex(item));
-  }, [item?.id, item?.imageUrl, activeList.length]);
+  const currentDisplayItem = activeList[currentIndex] || item;
+  const hasMultiple = activeList.length > 1;
 
   // Lock background scroll and interactions while lightbox is open
   useEffect(() => {
@@ -48,48 +50,36 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   }, []);
 
   // History & Back-button handling: on mobile, back closes the lightbox before navigating
-  const closedByPopstateRef = useRef(false);
-
   useEffect(() => {
-    // Push history state entry for the open lightbox
     window.history.pushState({ modal: 'lightbox' }, '');
     closedByPopstateRef.current = false;
 
     const handlePopState = () => {
       closedByPopstateRef.current = true;
-      onClose();
+      onCloseRef.current();
     };
 
     window.addEventListener('popstate', handlePopState);
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      // If modal was closed via UI (close button, backdrop, Escape) and not popstate,
-      // pop the pushed state entry so browser Back history stays intact
-      if (!closedByPopstateRef.current) {
-        if (window.history.state?.modal === 'lightbox') {
-          window.history.back();
-        }
+      if (!closedByPopstateRef.current && window.history.state?.modal === 'lightbox') {
+        window.history.back();
       }
     };
-  }, [onClose]);
+  }, []);
 
-  const currentDisplayItem = activeList[currentIndex] || item;
-  const hasMultiple = activeList.length > 1;
-
-  const handlePrev = (e?: React.MouseEvent | KeyboardEvent) => {
+  const handlePrev = (e?: React.MouseEvent | React.TouchEvent | KeyboardEvent) => {
     if (e && 'stopPropagation' in e) e.stopPropagation();
     if (!hasMultiple) return;
     const prevIndex = (currentIndex - 1 + activeList.length) % activeList.length;
-    setCurrentIndex(prevIndex);
     onSelect(activeList[prevIndex]);
   };
 
-  const handleNext = (e?: React.MouseEvent | KeyboardEvent) => {
+  const handleNext = (e?: React.MouseEvent | React.TouchEvent | KeyboardEvent) => {
     if (e && 'stopPropagation' in e) e.stopPropagation();
     if (!hasMultiple) return;
     const nextIndex = (currentIndex + 1) % activeList.length;
-    setCurrentIndex(nextIndex);
     onSelect(activeList[nextIndex]);
   };
 
@@ -104,19 +94,51 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
         handleNext(e);
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        onClose();
+        onCloseRef.current();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, activeList]);
+  }, [currentIndex, activeList, hasMultiple]);
+
+  // Touch gesture support: swipe left for next, swipe right for prev
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartXRef.current = e.touches[0].clientX;
+      touchStartYRef.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const deltaX = touchEndX - touchStartXRef.current;
+    const deltaY = touchEndY - touchStartYRef.current;
+
+    // Detect horizontal swipe if deltaX is significant and predominantly horizontal
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+      if (deltaX < 0) {
+        handleNext();
+      } else {
+        handlePrev();
+      }
+    }
+
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+  };
+
+  if (!item || !currentDisplayItem) return null;
 
   return (
     <div
       id="lightbox-backdrop"
-      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-200 select-none touch-none overscroll-none"
+      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-200 select-none overscroll-none"
       onClick={onClose}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       <button
         type="button"
@@ -138,7 +160,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
             type="button"
             id="lightbox-prev"
             onClick={handlePrev}
-            className="absolute left-4 sm:left-8 text-white/80 hover:text-white p-3 sm:p-3.5 rounded-full bg-black/50 hover:bg-black/75 border border-white/20 hover:border-white/40 shadow-lg transition-all cursor-pointer z-30 active:scale-95 touch-manipulation"
+            className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 text-white/90 hover:text-white p-3 sm:p-3.5 rounded-full bg-black/60 hover:bg-black/80 border border-white/20 hover:border-white/40 shadow-xl transition-all cursor-pointer z-30 active:scale-95 touch-manipulation"
             aria-label="Previous photo"
           >
             <ChevronLeft size={26} />
@@ -148,7 +170,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
             type="button"
             id="lightbox-next"
             onClick={handleNext}
-            className="absolute right-4 sm:right-8 text-white/80 hover:text-white p-3 sm:p-3.5 rounded-full bg-black/50 hover:bg-black/75 border border-white/20 hover:border-white/40 shadow-lg transition-all cursor-pointer z-30 active:scale-95 touch-manipulation"
+            className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 text-white/90 hover:text-white p-3 sm:p-3.5 rounded-full bg-black/60 hover:bg-black/80 border border-white/20 hover:border-white/40 shadow-xl transition-all cursor-pointer z-30 active:scale-95 touch-manipulation"
             aria-label="Next photo"
           >
             <ChevronRight size={26} />
@@ -167,7 +189,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 90vw, 1200px"
           decoding="async"
           alt={currentDisplayItem.title}
-          className="max-h-[75vh] w-auto max-w-full object-contain rounded-xs shadow-2xl transition-all duration-300"
+          className="max-h-[75vh] w-auto max-w-full object-contain rounded-xs shadow-2xl transition-all duration-300 pointer-events-none"
         />
         <div className="mt-4 text-center text-white">
           <div className="flex items-center justify-center gap-2 text-xs uppercase tracking-[0.25em] text-neutral-400">

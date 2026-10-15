@@ -233,15 +233,17 @@ function MainApp() {
       )}
 
       {/* Lightbox for Selected Work & Story Projects */}
-      <LightboxModal
-        item={activeLightboxItem}
-        items={activeLightboxItems && activeLightboxItems.length > 0 ? activeLightboxItems : selectedWork}
-        onClose={() => {
-          setActiveLightboxItem(null);
-          setActiveLightboxItems(null);
-        }}
-        onSelect={(item) => setActiveLightboxItem(item)}
-      />
+      {activeLightboxItem && (
+        <LightboxModal
+          item={activeLightboxItem}
+          items={activeLightboxItems && activeLightboxItems.length > 0 ? activeLightboxItems : selectedWork}
+          onClose={() => {
+            setActiveLightboxItem(null);
+            setActiveLightboxItems(null);
+          }}
+          onSelect={(item) => setActiveLightboxItem(item)}
+        />
+      )}
 
       {/* Soul Cinema Film Player Modal */}
       <VideoModal
